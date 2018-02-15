@@ -44,9 +44,7 @@ void readGraph(char *name) {
     u--, v--;
     adj[u].push_back(v);
     adj[v].push_back(u);
-  }
-
-  
+  }  
 
   fclose(instanceFile);
 }
