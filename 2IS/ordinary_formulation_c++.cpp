@@ -42,12 +42,13 @@ int main(int argc, char **argv) {
     char s, t[30];
     fscanf(instanceFile, "%c %s", &s, t);
     fscanf(instanceFile, "%d %d", &n, &m);
-
-    int adjMatrix[n * m];
-    
+    printf("There is %d vertex and %d edges. The array have size of %d\n", n, m, (n * m));
+    int adjMatrix[n * n];
+    memset(adjMatrix, 0, sizeof adjMatrix);
     for (int i = 0; i < m; i += 1) {
       int u, v;
       fscanf(instanceFile, "%d %d", &u, &v);
+      printf("edge (%d, %d)\n", u - 1, v - 1);
       u--, v--;
       adjMatrix[(u * n) + v] = 1;
       adjMatrix[(v * n) + u] = 1;
@@ -55,16 +56,16 @@ int main(int argc, char **argv) {
 
     fclose(instanceFile);
 
-    GRBVar vars[n * m];
-    for (int idx = 0; idx < n * m; idx += 1) {
+    GRBVar vars[n];
+    for (int idx = 0; idx < n; idx += 1) {
       ostringstream vname;
       vname << "var" << idx;
       vars[idx] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY, vname.str());
     }
 
     for (int i = 0; i < n; i++) {
-      for (int j = 0; j < m; j++) {
-        if (adjMatrix[(i * n) + j] == 1) {
+      for (int j = 0; j < n; j++) {
+        if (i != j && adjMatrix[(i * n) + j] == 1) {
           printf("Adding constraint in %d and %d [%d]\n", i, j, (i * n) + j);
           ostringstream cname;
           cname << "cosntr" << (i * n) + j;      
@@ -73,12 +74,23 @@ int main(int argc, char **argv) {
       }      
     }
 
-    model.set(GRB_IntAttr_ModelSense, GRB_MAXIMIZE);
-    //model.setObjective(w * x, GRB_MAXIMIZE);
-
+    GRBLinExpr obj = 0.0;
+    for (int var = 0; var < n; var++) {
+      obj += vars[var];
+    }
+    
+    model.setObjective(obj, GRB_MAXIMIZE);
+    //model.set(GRB_IntAttr_ModelSense, GRB_MAXIMIZE);
     model.optimize();
 
-    printf("End of the code.\n");
+    int status = model.get(GRB_IntAttr_Status);
+    if (status == GRB_OPTIMAL) {
+      printf("Solution found is optimal!\n");
+      for (int var = 0; var < n; var++) {
+        cout << vars[var].get(GRB_DoubleAttr_X) << " ";
+      }
+      cout << endl;
+    }
   } catch (GRBException ex) {
     cout << "Error code = " << ex.getErrorCode() << endl;
     cout << ex.getMessage() << endl;
