@@ -13,50 +13,7 @@ using namespace std;
 typedef vector<int> vi;
 
 char instanceName[50];
-vector<vi> adj;
 int n, m;
-
-void readGraph(char *name) {
-  strcat(instanceName, name);
-  char pathInstance[50];
-  memset(pathInstance, 0, sizeof pathInstance);
-  strcat(pathInstance, "./instancias/");
-  strcat(pathInstance, name);
-  //printf("%s\n", pathInstance);
-  FILE *instanceFile = fopen(pathInstance, "r");
-
-  if (instanceFile == NULL) {
-    printf("File cannot be open! Ending the program...\n");
-    exit(-1);
-  }
-
-  char s, t[30];
-  fscanf(instanceFile, "%c %s", &s, t);
-
-  fscanf(instanceFile, "%d %d", &n, &m);
-  adj.assign(n, vi());
-  
-  for (int i = 0; i < m; i += 1) {
-    int u, v;
-    fscanf(instanceFile, "%d %d", &u, &v);
-    u--, v--;
-    adj[u].push_back(v);
-    adj[v].push_back(u);
-  }
-
-  fclose(instanceFile);
-}
-
-void constructAdjMatrix(int *adjMatrix, int size) {
-  memset(adjMatrix, 0, size);
-  for (int i = 0; i < (int) adj.size(); i++) {
-    for (int j = 0; j < (int) adj[i].size(); j++) {
-      int v = adj[i][j];
-      adjMatrix[(i * n) + v] = 1;
-      printf("There is an edge (%d, %d), so [%d] = 1\n", i, v, (i * n) + v);
-    }
-  }
-}
 
 int main(int argc, char **argv) {
 
@@ -66,13 +23,38 @@ int main(int argc, char **argv) {
   }
 
   try {
-    readGraph(argv[1]);
     GRBEnv env = GRBEnv();
     GRBModel model = GRBModel(env);
+    char *name = argv[1];
+    strcat(instanceName, name);
+    char pathInstance[50];
+    memset(pathInstance, 0, sizeof pathInstance);
+    strcat(pathInstance, "./instancias/");
+    strcat(pathInstance, name);
+    //printf("%s\n", pathInstance);
+    FILE *instanceFile = fopen(pathInstance, "r");
+
+    if (instanceFile == NULL) {
+      printf("File cannot be open! Ending the program...\n");
+      exit(-1);
+    }
+
+    char s, t[30];
+    fscanf(instanceFile, "%c %s", &s, t);
+    fscanf(instanceFile, "%d %d", &n, &m);
 
     int adjMatrix[n * m];
-    constructAdjMatrix(adjMatrix, n * m);
     
+    for (int i = 0; i < m; i += 1) {
+      int u, v;
+      fscanf(instanceFile, "%d %d", &u, &v);
+      u--, v--;
+      adjMatrix[(u * n) + v] = 1;
+      adjMatrix[(v * n) + u] = 1;
+    }
+
+    fclose(instanceFile);
+
     GRBVar vars[n * m];
     for (int idx = 0; idx < n * m; idx += 1) {
       ostringstream vname;
