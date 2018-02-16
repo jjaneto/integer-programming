@@ -1,3 +1,5 @@
+#include <map>
+#include <set>
 #include <stdlib.h>
 #include <sstream>
 #include <deque>
@@ -107,20 +109,33 @@ void runOptimization(vector<vi> &adj1, vector<vi> &adj2) {
     printf("\n");
 
     adj2.assign(newVertex.size(), vi());
-
-    for (int u = 0; u < n; u++) {
-      if (vars[u].get(GRB_DoubleAttr_X) == 0) {
-        printf("Looking at vertex %d...\n", u);
-        for (int j = 0; j < (int) adj1[u].size(); j++) {
-          int v = adj1[u][j];
-          if (vars[v].get(GRB_DoubleAttr_X) == 0) {
-            adj2[u].push_back(v);
-            adj2[v].push_back(u);
-          } else {
-            printf("   |__ Vertex %d is inside the MIS!\n", v);
-          }
-        }
+    int vertexCount = 0;
+    map<int, int> seen;
+    
+    for (int i = 0; i < (int) newVertex.size(); i++) {
+      int u = newVertex[i];
+      //if (vars[u].get(GRB_DoubleAttr_X) == 0) {
+      if (seen.find(u) == seen.end()) {
+        seen[u] = vertexCount++;
+        printf("(1) vertex %d has not been seen until now! He turned %d\n", u, seen[u]);
       }
+      //printf("Looking at vertex %d...\n", u);
+      for (int j = 0; j < (int) adj1[u].size(); j++) {
+        int v = adj1[u][j];
+        if (vars[v].get(GRB_DoubleAttr_X) == 0) {
+          if (seen.find(v) == seen.end()) {
+            seen[v] = vertexCount++;
+            printf("(1) vertex %d has not been seen until now! He turned %d\n", v, seen[v]);
+          }
+          adj2[seen[u]].push_back(seen[v]);
+          adj2[seen[v]].push_back(seen[u]);
+          //adj2[u].push_back(v);
+          //adj2[v].push_back(u);
+        }/* else {
+            printf("   |__ Vertex %d is inside the MIS!\n", v);
+            }*/
+      }
+      //}
     }
   }
 }
@@ -138,6 +153,7 @@ void runOptimization_(vector<vi> &adj1) {
     vars[idx] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY, vname.str());
   }
 
+  puts("Passing here...");
   //Adding the constraints to the model.
   for (int i = 0; i < (int) adj1.size(); i++) {
     for (int j = 0; j < (int) adj1[i].size(); j++) {
@@ -146,13 +162,14 @@ void runOptimization_(vector<vi> &adj1) {
       ostringstream cname;
       cname << "constr" << (i * n) + v;
       model.addConstr(vars[i] + vars[v] <= 1, cname.str());
-      puts("Constraint add");
+      //puts("Constraint add");
     }
   }
+  puts("Just passed here...");
 
   //Adding the objective.
   GRBLinExpr obj = 0.0;
-  for (int var = 0; var < n; var++) {
+  for (int var = 0; var < nvars; var++) {
     obj += vars[var];
   }
     
@@ -164,7 +181,7 @@ void runOptimization_(vector<vi> &adj1) {
   if (status == GRB_OPTIMAL) {
     printf("Solution found is optimal!\n");
     vector<int> newVertex;
-    for (int var = 0; var < n; var++) {
+    for (int var = 0; var < nvars; var++) {
       printf("%d ", (int) vars[var].get(GRB_DoubleAttr_X));
     }
     printf("\n");
@@ -182,7 +199,7 @@ int main(int argc, char **argv) {
     readGraph(argv[1], graph1);
     runOptimization(graph1, graph2);
     printGraph(graph2);
-    //runOptimization_(graph2);
+    runOptimization_(graph2);
   } catch (GRBException ex) {
     cout << "Error code = " << ex.getErrorCode() << endl;
     cout << ex.getMessage() << endl;
