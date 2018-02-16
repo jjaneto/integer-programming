@@ -1,1 +1,6 @@
 *~
+### LaTeX Extensions ###
+*.aux
+*.synctex.gz
+*.log
+*.aux
