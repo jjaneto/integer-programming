@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <sstream>
 #include <deque>
 #include <cstring>
@@ -13,10 +14,20 @@ using namespace std;
 typedef vector<int> vi;
 
 char instanceName[50];
-vector<vi> adj;
+vector<vi> graph1, graph2;
 int n, m;
 
-void readGraph(char *name) {
+void printGraph(vector<vi> &adjList) {
+  for (int i = 0; i < (int) adjList.size(); i++) {
+    printf("Vertex %d: ", i);
+    for (int j = 0; j < (int) adjList[i].size(); j++) {
+      printf("%d ", adjList[i][j]);
+    }
+    puts("");
+  }
+}
+
+void readGraph(char *name, vector<vi> &adjList) {
   strcat(instanceName, name);
   char pathInstance[50];
   memset(pathInstance, 0, sizeof pathInstance);
@@ -35,80 +46,149 @@ void readGraph(char *name) {
   fscanf(instanceFile, "%d %d", &n, &m);
   printf("There is %d vertex and %d edges. The array have size of %d\n", n, m, (n * m));
 
-  adj.assign(n, vi());
+  adjList.assign(n, vi());
 
   for (int i = 0; i < m; i += 1) {
     int u, v;
     fscanf(instanceFile, "%d %d", &u, &v);
-    printf("edge (%d, %d)\n", u - 1, v - 1);
     u--, v--;
-    adj[u].push_back(v);
-    adj[v].push_back(u);
-  }  
-
+    adjList[u].push_back(v);
+    adjList[v].push_back(u);
+  }
+  
   fclose(instanceFile);
 }
 
-/*GRBModel optimize() {
+void runOptimization(vector<vi> &adj1, vector<vi> &adj2) {
+  GRBEnv env = GRBEnv();
+  GRBModel model = GRBModel(env);
+  GRBVar vars[(int) adj1.size()];
 
-  return nullptr;
-  }*/
+  int nvars = (int) adj1.size();
+
+  //Adding the variables to the model.
+  for (int idx = 0; idx < nvars; idx += 1) {
+    ostringstream vname;
+    vname << "var" << idx;
+    vars[idx] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY, vname.str());
+  }
+
+  //Adding the constraints to the model.
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < (int) adj1[i].size(); j++) {
+      int v = adj1[i][j];
+      ostringstream cname;
+      cname << "constr" << (i * n) + v;
+      model.addConstr(vars[i] + vars[v] <= 1, cname.str());
+    }
+  }
+
+  //Adding the objective.
+  GRBLinExpr obj = 0.0;
+  for (int var = 0; var < n; var++) {
+    obj += vars[var];
+  }
+    
+  model.setObjective(obj, GRB_MAXIMIZE);
+  model.optimize();
+
+  int status = model.get(GRB_IntAttr_Status);
+
+  if (status == GRB_OPTIMAL) {
+    printf("Solution found is optimal! The variables are:\n");
+    vector<int> newVertex;
+    for (int var = 0; var < n; var++) {
+      printf("[%d=>%d] ", var, (int) vars[var].get(GRB_DoubleAttr_X));      
+      if (vars[var].get(GRB_DoubleAttr_X) == 0) {
+        //TODO: This vertex should be in the second graph to be used in the search for the second indepent set.
+        newVertex.push_back(var);
+      }
+    }
+    printf("\n");
+
+    adj2.assign(newVertex.size(), vi());
+
+    for (int u = 0; u < n; u++) {
+      if (vars[u].get(GRB_DoubleAttr_X) == 0) {
+        printf("Looking at vertex %d...\n", u);
+        for (int j = 0; j < (int) adj1[u].size(); j++) {
+          int v = adj1[u][j];
+          if (vars[v].get(GRB_DoubleAttr_X) == 0) {
+            adj2[u].push_back(v);
+            adj2[v].push_back(u);
+          } else {
+            printf("   |__ Vertex %d is inside the MIS!\n", v);
+          }
+        }
+      }
+    }
+  }
+}
+
+void runOptimization_(vector<vi> &adj1) {
+  GRBEnv env = GRBEnv();
+  GRBModel model = GRBModel(env);
+  GRBVar vars[(int) adj1.size()];
+  int nvars = (int) adj1.size();
+
+  //Adding the variables to the model.
+  for (int idx = 0; idx < nvars; idx += 1) {
+    ostringstream vname;
+    vname << "var" << idx;
+    vars[idx] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY, vname.str());
+  }
+
+  //Adding the constraints to the model.
+  for (int i = 0; i < (int) adj1.size(); i++) {
+    for (int j = 0; j < (int) adj1[i].size(); j++) {
+      int v = adj1[i][j];
+      printf("Edge (%d, %d)\n", i, v);
+      ostringstream cname;
+      cname << "constr" << (i * n) + v;
+      model.addConstr(vars[i] + vars[v] <= 1, cname.str());
+      puts("Constraint add");
+    }
+  }
+
+  //Adding the objective.
+  GRBLinExpr obj = 0.0;
+  for (int var = 0; var < n; var++) {
+    obj += vars[var];
+  }
+    
+  model.setObjective(obj, GRB_MAXIMIZE);
+  model.optimize();
+
+  int status = model.get(GRB_IntAttr_Status);
+
+  if (status == GRB_OPTIMAL) {
+    printf("Solution found is optimal!\n");
+    vector<int> newVertex;
+    for (int var = 0; var < n; var++) {
+      printf("%d ", (int) vars[var].get(GRB_DoubleAttr_X));
+    }
+    printf("\n");
+  }
+}
 
 int main(int argc, char **argv) {
 
   if (argc < 2) {
-    printf("Missing arguments...\n");
+    printf("Missing arguments...\n"); 
     return -1;
   }
 
   try {
-    GRBEnv env = GRBEnv();
-    GRBModel model = GRBModel(env);
-
-    readGraph(argv[1]);
-
-    //Adding the variables to the model.
-    GRBVar vars[n];
-    for (int idx = 0; idx < n; idx += 1) {
-      ostringstream vname;
-      vname << "var" << idx;
-      vars[idx] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY, vname.str());
-    }
-
-    //Adding the constraints to the model.
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < (int) adj[i].size(); j++) {
-        int v = adj[i][j];
-        ostringstream cname;
-        cname << "constr" << (i * n) + v;
-        model.addConstr(vars[i] + vars[v] <= 1, cname.str());
-      }
-    }
-
-    //Adding the objective.
-    GRBLinExpr obj = 0.0;
-    for (int var = 0; var < n; var++) {
-      obj += vars[var];
-    }
-    
-    model.setObjective(obj, GRB_MAXIMIZE);
-    model.optimize();
-
-    int status = model.get(GRB_IntAttr_Status);
-    printf("Status: %d\n", status);
-    if (status == GRB_OPTIMAL) {
-      printf("Solution found is optimal!\n");
-      for (int var = 0; var < n; var++) {
-        cout << vars[var].get(GRB_DoubleAttr_X) << " ";
-      }
-      cout << endl;
-    }
+    readGraph(argv[1], graph1);
+    runOptimization(graph1, graph2);
+    printGraph(graph2);
+    //runOptimization_(graph2);
   } catch (GRBException ex) {
     cout << "Error code = " << ex.getErrorCode() << endl;
     cout << ex.getMessage() << endl;
   } catch (...) {
     cout << "fora temer" << endl;
-  }  
+  } 
 
   return 0;
 }
