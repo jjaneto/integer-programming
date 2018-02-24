@@ -4,3 +4,6 @@
 *.synctex.gz
 *.log
 *.aux
+**/*.bbl
+**/*.blg
+**/auto/
