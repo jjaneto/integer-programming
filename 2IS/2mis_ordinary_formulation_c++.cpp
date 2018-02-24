@@ -147,31 +147,15 @@ void runOptimization_(vector<vi> &adj1) {
   int nvars = (int) adj1.size();
 
   //Adding the variables to the model.
-  for (int idx = 0; idx < nvars; idx += 1) {
-    ostringstream vname;
-    vname << "var" << idx;
-    vars[idx] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY, vname.str());
-  }
+  
 
-  puts("Passing here...");
   //Adding the constraints to the model.
-  for (int i = 0; i < (int) adj1.size(); i++) {
-    for (int j = 0; j < (int) adj1[i].size(); j++) {
-      int v = adj1[i][j];
-      printf("Edge (%d, %d)\n", i, v);
-      ostringstream cname;
-      cname << "constr" << (i * n) + v;
-      model.addConstr(vars[i] + vars[v] <= 1, cname.str());
-      //puts("Constraint add");
-    }
-  }
-  puts("Just passed here...");
-
+  
   //Adding the objective.
-  GRBLinExpr obj = 0.0;
+  /*GRBLinExpr obj = 0.0;
   for (int var = 0; var < nvars; var++) {
     obj += vars[var];
-  }
+  }*/
     
   model.setObjective(obj, GRB_MAXIMIZE);
   model.optimize();
@@ -197,9 +181,9 @@ int main(int argc, char **argv) {
 
   try {
     readGraph(argv[1], graph1);
-    runOptimization(graph1, graph2);
-    printGraph(graph2);
-    runOptimization_(graph2);
+    //runOptimization(graph1, graph2);
+    //printGraph(graph2);
+    //runOptimization_(graph2);
   } catch (GRBException ex) {
     cout << "Error code = " << ex.getErrorCode() << endl;
     cout << ex.getMessage() << endl;
