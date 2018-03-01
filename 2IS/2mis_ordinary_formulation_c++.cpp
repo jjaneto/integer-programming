@@ -16,7 +16,7 @@ using namespace std;
 typedef vector<int> vi;
 
 char instanceName[50];
-vector<vi> graph1, graph2;
+vector<vi> graph1;
 int n, m;
 
 void printGraph(vector<vi> &adjList) {
@@ -61,101 +61,46 @@ void readGraph(char *name, vector<vi> &adjList) {
   fclose(instanceFile);
 }
 
-void runOptimization(vector<vi> &adj1, vector<vi> &adj2) {
+void runOptimization(vector<vi> &adj) {
+  int nVertex = (int) adj.size();
+  int nvars = (int) (2 * adj.size());
+  
   GRBEnv env = GRBEnv();
   GRBModel model = GRBModel(env);
-  GRBVar vars[(int) adj1.size()];
-
-  int nvars = (int) adj1.size();
+  GRBVar vars[nvars]; 
 
   //Adding the variables to the model.
   for (int idx = 0; idx < nvars; idx += 1) {
     ostringstream vname;
-    vname << "var" << idx;
+    vname << "var_" << idx;// << (idx < nVertex ? 1 : 2);
     vars[idx] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY, vname.str());
   }
-
-  //Adding the constraints to the model.
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j < (int) adj1[i].size(); j++) {
-      int v = adj1[i][j];
-      ostringstream cname;
-      cname << "constr" << (i * n) + v;
-      model.addConstr(vars[i] + vars[v] <= 1, cname.str());
+  
+  //------ Adding the constraints to the model.
+  // 1 - The two IS are disjoints
+  for (int idx = 0; idx < nVertex; idx += 1) {
+    ostringstream cname;
+    cname << "constr" << idx;
+    model.addConstr(vars[idx] + vars[idx + nVertex] <= 1.0, cname.str());
+  }
+  
+  // 2 - The two IS are valids.
+  for (int i = 0; i < nVertex; i += 1) {
+    for (int j = 0; j < (int) adj[i].size(); j += 1) {
+      int v = adj[i][j];
+      ostringstream cname, cname2;
+      cname << "constr_1_" << (i * n) + v;
+      cname2 << "constr_2_" << (i * n) + v;
+      model.addConstr(vars[i] + vars[v] <= 1.0, cname.str());
+      model.addConstr(vars[i + nVertex] + vars[v + nVertex] <= 1.0, cname2.str());
     }
   }
-
-  //Adding the objective.
+  
+  //------ Adding the objective.
   GRBLinExpr obj = 0.0;
-  for (int var = 0; var < n; var++) {
-    obj += vars[var];
-  }
-    
-  model.setObjective(obj, GRB_MAXIMIZE);
-  model.optimize();
-
-  int status = model.get(GRB_IntAttr_Status);
-
-  if (status == GRB_OPTIMAL) {
-    printf("Solution found is optimal! The variables are:\n");
-    vector<int> newVertex;
-    for (int var = 0; var < n; var++) {
-      printf("[%d=>%d] ", var, (int) vars[var].get(GRB_DoubleAttr_X));      
-      if (vars[var].get(GRB_DoubleAttr_X) == 0) {
-        //TODO: This vertex should be in the second graph to be used in the search for the second indepent set.
-        newVertex.push_back(var);
-      }
-    }
-    printf("\n");
-
-    adj2.assign(newVertex.size(), vi());
-    int vertexCount = 0;
-    map<int, int> seen;
-    
-    for (int i = 0; i < (int) newVertex.size(); i++) {
-      int u = newVertex[i];
-      //if (vars[u].get(GRB_DoubleAttr_X) == 0) {
-      if (seen.find(u) == seen.end()) {
-        seen[u] = vertexCount++;
-        printf("(1) vertex %d has not been seen until now! He turned %d\n", u, seen[u]);
-      }
-      //printf("Looking at vertex %d...\n", u);
-      for (int j = 0; j < (int) adj1[u].size(); j++) {
-        int v = adj1[u][j];
-        if (vars[v].get(GRB_DoubleAttr_X) == 0) {
-          if (seen.find(v) == seen.end()) {
-            seen[v] = vertexCount++;
-            printf("(1) vertex %d has not been seen until now! He turned %d\n", v, seen[v]);
-          }
-          adj2[seen[u]].push_back(seen[v]);
-          adj2[seen[v]].push_back(seen[u]);
-          //adj2[u].push_back(v);
-          //adj2[v].push_back(u);
-        }/* else {
-            printf("   |__ Vertex %d is inside the MIS!\n", v);
-            }*/
-      }
-      //}
-    }
-  }
-}
-
-void runOptimization_(vector<vi> &adj1) {
-  GRBEnv env = GRBEnv();
-  GRBModel model = GRBModel(env);
-  GRBVar vars[(int) adj1.size()];
-  int nvars = (int) adj1.size();
-
-  //Adding the variables to the model.
-  
-
-  //Adding the constraints to the model.
-  
-  //Adding the objective.
-  /*GRBLinExpr obj = 0.0;
   for (int var = 0; var < nvars; var++) {
     obj += vars[var];
-  }*/
+  }
     
   model.setObjective(obj, GRB_MAXIMIZE);
   model.optimize();
@@ -181,9 +126,7 @@ int main(int argc, char **argv) {
 
   try {
     readGraph(argv[1], graph1);
-    //runOptimization(graph1, graph2);
-    //printGraph(graph2);
-    //runOptimization_(graph2);
+    runOptimization(graph1);
   } catch (GRBException ex) {
     cout << "Error code = " << ex.getErrorCode() << endl;
     cout << ex.getMessage() << endl;
