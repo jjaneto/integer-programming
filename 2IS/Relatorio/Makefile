@@ -5,7 +5,7 @@ all:
 	pdflatex -shell-escape $(TEXNAME)
 	pdflatex -shell-escape $(TEXNAME)
 	pdflatex -shell-escape $(TEXNAME)
-	open $(BASENAME).pdf
+	open -a Preview $(BASENAME).pdf
 
 
 clean:
