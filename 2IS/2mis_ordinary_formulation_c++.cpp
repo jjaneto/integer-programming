@@ -15,7 +15,6 @@ using namespace std;
 
 typedef vector<int> vi;
 
-char instanceName[50];
 vector<vi> graph1;
 int n, m;
 
@@ -30,13 +29,7 @@ void printGraph(vector<vi> &adjList) {
 }
 
 void readGraph(char *name, vector<vi> &adjList) {
-  strcat(instanceName, name);
-  char pathInstance[50];
-  memset(pathInstance, 0, sizeof pathInstance);
-  strcat(pathInstance, "./instancias/");
-  strcat(pathInstance, name);
-  //printf("%s\n", pathInstance);
-  FILE *instanceFile = fopen(pathInstance, "r");
+  FILE *instanceFile = freopen(name, "r", stdin);
 
   if (instanceFile == NULL) {
     printf("File cannot be open! Ending the program...\n");
@@ -44,21 +37,19 @@ void readGraph(char *name, vector<vi> &adjList) {
   }
 
   char s, t[30];
-  fscanf(instanceFile, "%c %s", &s, t);
-  fscanf(instanceFile, "%d %d", &n, &m);
+  scanf("%c %s", &s, t);
+  scanf("%d %d", &n, &m);
   printf("There is %d vertex and %d edges. The array have size of %d\n", n, m, (n * m));
 
   adjList.assign(n, vi());
 
   for (int i = 0; i < m; i += 1) {
     int u, v;
-    fscanf(instanceFile, "%d %d", &u, &v);
+    scanf("%d %d", &u, &v);
     u--, v--;
     adjList[u].push_back(v);
     adjList[v].push_back(u);
   }
-  
-  fclose(instanceFile);
 }
 
 void runOptimization(vector<vi> &adj) {
@@ -120,8 +111,9 @@ void runOptimization(vector<vi> &adj) {
 int main(int argc, char **argv) {
 
   if (argc < 2) {
-    printf("Missing arguments...\n"); 
-    return -1;
+    printf("Missing arguments...\n");
+    printf("USAGE: ./2mis_ordinary_formulation_c++ 'pathOfInstance'\n");
+    exit(EXIT_FAILURE);
   }
 
   try {
