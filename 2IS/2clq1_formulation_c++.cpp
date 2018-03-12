@@ -104,9 +104,7 @@ void expandClique(const ii edge, const vector<vi> &adjList, vi &newClique_) {
 
 void clq1(const vector<vi> &adjList, set<vi> &cliques) {
   set<ii> marked;
-  map<int, vi> cliques_map;
-  int clique_number = 0;
-  
+
   for (int u = 0; u < (int) adjList.size(); u++) {
     for (int j = 0; j < (int) adjList[u].size(); j++) {
       int v = adjList[u][j];
@@ -116,12 +114,11 @@ void clq1(const vector<vi> &adjList, set<vi> &cliques) {
         expandClique(ii(u, v), adjList, newClique_);
         cliques.insert(newClique_);
 
-        cliques_map[clique_number++] = newClique_;
-        
         int cliqueSize = (int) newClique_.size();
         for (int i = 0; i < cliqueSize; i++) {
           for (int j = i + 1; j < cliqueSize; j++) {
             int x = newClique_[i], y = newClique_[j];
+            //printf("_______ marking %d %d\n", x, y);
             marked.insert(ii(newClique_[i], newClique_[j]));
           }
         }        
@@ -129,13 +126,13 @@ void clq1(const vector<vi> &adjList, set<vi> &cliques) {
     }
   }
 
-  /*printf("The cliques are as follows:\n");
+  printf("The cliques are as follows:\n");
   for (const auto &clique_ : cliques) {
     for (int i = 0; i < (int) clique_.size(); i++) {
       printf("%d ", clique_[i]);
     }
     puts("");
-  }*/
+  }
 }
 
 bool eachNodeHasZeroWeight(vi &nodes) {
@@ -146,39 +143,28 @@ bool eachNodeHasZeroWeight(vi &nodes) {
   return true;
 }
 
-//TODO: Just a draft. Remove after complete the implementation
-void PRIMALH() {
-  vi eligible_nodes;
-  vector<vi> eligible_nodes_clique;
-  vector<vi> eligible_cliques;  
-  while (!eligible_cliques.empty()) {
-
-  }
-}
-
 //TODO: Maybe it is better if I separate DUALH and PRIMALH in two methods. Check this later.
 void heuristics(const vector<vi> &adjList, const set<vi> &cliques, vi &hardness, vi &clique_value) {
   // --------- DUALH ----------
   vi node_weight(n, NODE_WEIGHT);
   vi y_c((int) cliques.size(), 0);
-  vi node_appearence(n, 0);
-
-  //Compute the number of times that node v appears in some clique
-  for (const auto &clique_ : cliques) {
-    for (int i = 0; i < (int) clique_.size(); i++) {
-      //printf("node appears %d\n", clique_[i]);
-      node_appearence[clique_[i]] += 1;
-    }
-  }
-    
   while (!eachNodeHasZeroWeight(node_weight)) {
+    vi node_appearence(n, 0);
     hardness.assign(n, 0);
     clique_value.assign((int) cliques.size(), 0);
+  
+    //Compute the number of times that node v appears in some clique
+    for (const auto &clique_ : cliques) {
+      for (int i = 0; i < (int) clique_.size(); i++) {
+        printf("node appears %d\n", clique_[i]);
+        node_appearence[clique_[i]] += 1;
+      }
+    }
   
     //Then, define the hardness of node v
     int cardinality = (int) cliques.size();
     for (int i = 0; i < (int) adjList.size(); i++) {
-      hardness[i] = (cardinality - node_appearence[i]) * node_weight[i];
+      hardness[i] = (cardinality - node_appearence[i]) * NODE_WEIGHT; //FIXME: (node_weight value).
     }
 
     /*printf("The hardness of the nodes are:\n");
@@ -196,7 +182,21 @@ void heuristics(const vector<vi> &adjList, const set<vi> &cliques, vi &hardness,
       idx += 1;
     }
 
-    
+    int maxCliqueValue = getMaxCliqueValue();
+
+    idx = 0;
+    for (const auto &clique_ : cliques) {
+      int minElement = numeric_limits<int>::max();
+      for (const auto &vertex : clique_) {
+        minElement = min(minElement, node_weight[vertex]);
+      }
+
+      for (const auto &vertex : clique_) {
+        node_weight[vertex] = max(0, node_weight[vertex] - minElement);
+      }
+
+      y_c[idx] += minElement;
+    }
   }
   // End of DUALH.
   
@@ -225,5 +225,19 @@ int main(int argc, char **argv) {
     printf("USAGE: ./2mis_ordinary_formulation_c++ 'pathOfInstance'\n");
     exit(EXIT_FAILURE);
   }
+
+  readGraph(argv[1], graph1);
+  clq1(graph1, cliques_main);
+  processCliques(graph1, cliques_main, hardness_main, value_main);
+  /*try {
+    readGraph(argv[1], graph1);
+    clq1(graph1, cliques_main);
+    } catch (GRBException ex) {
+    cout << "Error code = " << ex.getErrorCode() << endl;
+    cout << ex.getMessage() << endl;
+    } catch (...) {
+    cout << "fora temer" << endl;
+    }*/
+  
   return 0;
 }
