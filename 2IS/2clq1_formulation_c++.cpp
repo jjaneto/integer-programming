@@ -20,7 +20,7 @@ typedef pair<int, int> ii;
 const int NODE_WEIGHT = 1;
 
 vi hardness_main, value_main;
-vector<vi> graph1;
+vector<set<int> > graph1;
 set<vi> cliques_main;
 int n, m;
 
@@ -35,7 +35,7 @@ void printGraph(vector<vi> &adjList) {
 }
 
 
-void readGraph(char *name, vector<vi> &adjList) {
+void readGraph(char *name, vector<set<int> > &adjList) {
   FILE *instanceFile = freopen(name, "r", stdin);
 
   if (instanceFile == NULL) {
@@ -48,32 +48,38 @@ void readGraph(char *name, vector<vi> &adjList) {
   fscanf(instanceFile, "%d %d", &n, &m);
   printf("There is %d vertex and %d edges. The array have size of %d\n", n, m, (n * m));
   
-  adjList.assign(n, vi());
+  adjList.assign(n, set<int>());
 
   for (int i = 0; i < m; i += 1) {
     int u, v;
     scanf("%d %d", &u, &v);
     u--, v--;
-    adjList[u].push_back(v);
-    adjList[v].push_back(u);
+    adjList[u].insert(v);
+    adjList[v].insert(u);
   }
 }
 
-void expandClique(const ii edge, const vector<vi> &adjList, vi &newClique_) {
+bool adjacentToAll(const int v, const vector<set<int> > &adjList, const vi &newClique_) {
+  for (int i = 0; i < (int) newClique_.size(); i++) {
+    if (adjList[newClique_[i]].find(v) == adjList[newClique_[i]].end()) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+void expandClique(const ii edge, const vector<set<int> > &adjList, vi &newClique_) {
   int u, v;
   newClique_.push_back((u = edge.first));
   newClique_.push_back((v = edge.second));
   
-  for (int i = 0; i < (int) adjList[u].size(); i++) {
-    int y = adjList[u][i];
-    //Check if the node y is also adjacent to v
-    for (int j = 0; j < (int) adjList[v].size(); j++) {
-      if (adjList[v][j] == y) {
-        newClique_.push_back(y);
-      }
+  for (int i = 0; i < (int) adjList.size(); i++) {
+    if (adjacentToAll(i, adjList, newClique_)) {
+      newClique_.push_back(i);
     }
   }
-
+  
   printf("new clique\n");
   for (auto &x : newClique_) {
     printf("%d ", x + 1);
@@ -81,20 +87,19 @@ void expandClique(const ii edge, const vector<vi> &adjList, vi &newClique_) {
   puts("");
 }
 
-void clq1(const vector<vi> &adjList, set<vi> &cliques) {
+void clq1(const vector<set<int> > &adjList, set<vi> &cliques) {
   set<ii> marked;
   map<int, vi> cliques_map;
   int clique_number = 0;
   
   for (int u = 0; u < (int) adjList.size(); u++) {
-    for (int j = 0; j < (int) adjList[u].size(); j++) {
-      int v = adjList[u][j];
-      printf("looking edge %d %d\n", u + 1, v + 1);
+    for (const auto &v : adjList[u]) {
+      //printf("looking edge %d %d\n", u + 1, v + 1);
       if ((marked.find(ii(u, v)) == marked.end()) && (marked.find(ii(v, u)) == marked.end())) {
         vi newClique_;
         expandClique(ii(u, v), adjList, newClique_);
         cliques.insert(newClique_);
-
+        
         cliques_map[clique_number++] = newClique_;
         
         int cliqueSize = (int) newClique_.size();
@@ -117,7 +122,7 @@ void clq1(const vector<vi> &adjList, set<vi> &cliques) {
   }
 }
 
-void runOptimization(vector<vi> &adj, set<vi> &cliques) {
+void runOptimization(vector<set<int> > &adj, set<vi> &cliques) {
   int nVertex = (int) adj.size();
   int nvars = (int) (2 * adj.size());
 
@@ -197,7 +202,7 @@ int main(int argc, char **argv) {
   try {
     readGraph(argv[1], graph1);
     clq1(graph1, cliques_main);
-    runOptimization(graph1, cliques_main);
+    //runOptimization(graph1, cliques_main);
   } catch (GRBException ex) {
     cout << "Error code = " << ex.getErrorCode() << endl;
     cout << ex.getMessage() << endl;
