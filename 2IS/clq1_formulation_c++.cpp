@@ -1,3 +1,5 @@
+// This file contains the original and pure CLQ1 formulation
+#include <fstream>
 #include <limits>
 #include <map>
 #include <set>
@@ -96,10 +98,10 @@ void expandClique(const ii edge, const vector<vi> &adjList, vi &newClique_) {
   }
 
   /*printf("new clique\n");
-    for (auto &x : newClique_) {
+  for (auto &x : newClique_) {
     printf("%d ", x);
-    }  
-    puts("");*/
+  }  
+  puts("");*/
 }
 
 void clq1(const vector<vi> &adjList, set<vi> &cliques) {
@@ -138,84 +140,52 @@ void clq1(const vector<vi> &adjList, set<vi> &cliques) {
   }*/
 }
 
-bool eachNodeHasZeroWeight(vi &nodes) {
-  for (int i = 0; i < (int) nodes.size(); i++) 
-    if (nodes[i] != 0)
-      return false;
-  
-  return true;
-}
-
-//TODO: Just a draft. Remove after complete the implementation
-void PRIMALH() {
-  vi eligible_nodes;
-  vector<vi> eligible_nodes_clique;
-  vector<vi> eligible_cliques;  
-  while (!eligible_cliques.empty()) {
-
-  }
-}
-
-//TODO: Maybe it is better if I separate DUALH and PRIMALH in two methods. Check this later.
-void heuristics(const vector<vi> &adjList, const set<vi> &cliques, vi &hardness, vi &clique_value) {
-  // --------- DUALH ----------
-  vi node_weight(n, NODE_WEIGHT);
-  vi y_c((int) cliques.size(), 0);
-  vi node_appearence(n, 0);
-
-  //Compute the number of times that node v appears in some clique
-  for (const auto &clique_ : cliques) {
-    for (int i = 0; i < (int) clique_.size(); i++) {
-      //printf("node appears %d\n", clique_[i]);
-      node_appearence[clique_[i]] += 1;
-    }
-  }
-    
-  while (!eachNodeHasZeroWeight(node_weight)) {
-    hardness.assign(n, 0);
-    clique_value.assign((int) cliques.size(), 0);
-  
-    //Then, define the hardness of node v
-    int cardinality = (int) cliques.size();
-    for (int i = 0; i < (int) adjList.size(); i++) {
-      hardness[i] = (cardinality - node_appearence[i]) * node_weight[i];
-    }
-
-    /*printf("The hardness of the nodes are:\n");
-    for (int i = 0; i < n; i++) {
-      printf("%d ", hardness[i]);
-    }
-    puts("");*/
-
-    //And at last, define the value of the clique
-    int idx = 0;
-    for (const vi &clique_ : cliques) {
-      for (int v : clique_) {
-        clique_value[idx] += hardness[v];
-      }
-      idx += 1;
-    }
-
-    
-  }
-  // End of DUALH.
-  
-  // --------- PRIMALH ----------
-  
-}
-
-void runOptimization() {
-  int nVars = 0;
+void runOptimization(vector<vi> &adj, set<vi> &cliques) {
+  int nVertex = (int) adj.size();
+  int nvars = (int) adj.size();
 
   GRBEnv env = GRBEnv();
   GRBModel model = GRBModel(env);
-  GRBVar vars[nVars];
+  GRBVar vars[nvars];
 
   //------------ Adding the variables to the model.
+  for (int idx = 0; idx < nvars; idx += 1) {
+    ostringstream vname;
+    vname << "var_" << idx;// << (idx < nVertex ? 1 : 2);
+    vars[idx] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY, vname.str());
+  }
 
-  //------------ adding the constraints to the model.
-
+  //------------ Adding the constraints to the model.  
+  int idx = 0;
+  for (const auto &clique_ : cliques) { // For each clique
+    GRBLinExpr obj;
+    ostringstream cname_clique;
+    cname_clique << "constr_clique_" << idx++;
+    for (int i = 0; i < (int) clique_.size(); i++) {
+      obj += clique_[i];
+    }
+    model.addConstr(obj <= 1.0, cname_clique.str());
+  }
+  
   //------------ Adding the objective.
+  GRBLinExpr obj = 0.0;
+  for (int var = 0; var < nvars; var++) {
+    obj += vars[var];
+  }
+  
+  model.setObjective(obj, GRB_MAXIMIZE);
+  model.optimize();
+
+  int status = model.get(GRB_IntAttr_Status);
+
+  if (status == GRB_OPTIMAL) {
+    printf("Solution found is optimal!\n");
+    vector<int> newVertex;
+    for (int var = 0; var < nvars; var++) {
+      printf("%d ", (int) vars[var].get(GRB_DoubleAttr_X));
+    }
+    printf("\n");
+  }
 }
 
 int main(int argc, char **argv) {

@@ -1,3 +1,4 @@
+#include <fstream>
 #include <limits>
 #include <map>
 #include <set>
@@ -23,6 +24,83 @@ vi hardness_main, value_main;
 vector<vi> graph1;
 set<vi> cliques_main;
 int n, m;
+
+class mycallback: public GRBCallback {
+public:
+  double lastiter;
+  double lastnode;
+  int numvars;
+  GRBVar* vars;
+  ofstream* logfile;
+  vector<vi> adjList;
+  mycallback(int xnumvars, GRBVar* xvars, ofstream* xlogfile, vector<vi> &adjList) {
+    lastiter = lastnode = -GRB_INFINITY;
+    numvars = xnumvars;
+    vars = xvars;
+    logfile = xlogfile;
+    this->adjList = adjList;
+  }
+protected:
+  void callback () {
+    try {
+      if (where == GRB_CB_MIPNODE) {
+        if (getIntInfo(GRB_CB_MIPNODE_STATUS) == GRB_OPTIMAL) {
+          double* x = getNodeRel(vars, numvars);
+          RND1(x), RND2(x); //Apply the heuristics
+          setSolution(vars, x, numvars);
+          delete[] x;
+        }
+      }
+    } catch (GRBException e) {
+      cout << "Error number: " << e.getErrorCode() << endl;
+      cout << e.getMessage() << endl;
+    }    
+  }
+
+private:
+  //-----------------------Heuristics----------------------------
+  //Set to 1.0 the selected variable and to 0.0 all its adjacents
+  void RND1(double *variables) {
+    double varValue = 0.0;
+    int indexVar = -1;
+    for (int i = 0 ; i < numvars; i++) {
+      if (variables[i] < 1.0 && (variables[i] > varValue)) {
+        indexVar = i;
+        varValue = variables[i];
+      }
+    }
+
+    variables[indexVar] = 1.0;
+    for (int i = 0; i < (int) adjList[indexVar].size(); i++) {
+      variables[adjList[indexVar][i]] = 0.0;
+    }    
+  }
+  
+  void RND2(double *variables) {
+    double varValue = numeric_limits<double>::max();
+    int indexVar = -1;
+    for (int i = 0; i < numvars; i++) {
+      if (variables[i] > 0.0 && variables[i] < 1.0) {
+        double sum = variables[i];
+        for (int j = 0; j < (int) adjList[i].size(); j++) {
+          sum += variables[adjList[i][j]];
+        }
+
+        if (sum < varValue) {
+          indexVar = i;
+          varValue = sum;
+        }
+      }
+    }
+
+    variables[indexVar] = 1.0;
+    for (int i = 0; i < (int) adjList[indexVar].size(); i++) {
+      variables[adjList[indexVar][i]] = 0.0;
+    }
+  }
+  //-----------------------Heuristics----------------------------
+};
+
 
 void printGraph(vector<vi> &adjList) {
   for (int i = 0; i < (int) adjList.size(); i++) {
@@ -59,11 +137,32 @@ void readGraph(char *name, vector<vi> &adjList) {
   }
 }
 
+bool adjacentToAll(const vi &clique, const vector<vi> &adjList, const ii edge) {
+  for (int k = 0; k < 2; k++) {
+    int u = (k == 0 ? edge.first : edge.second);
+    for (int i = 0; i < (int) adjList[u].size(); i++) {
+      int v = adjList[u][i];
+      bool isInside = false;
+
+      for (int j = 0; j < (int) clique.size() && isInside; j++) {
+        if (v == clique[j]) {
+          isInside = true;
+        }
+      }
+    
+      if (!isInside)
+        return false;
+    }
+  }
+
+  return true;
+}
+
 void expandClique(const ii edge, const vector<vi> &adjList, vi &newClique_) {
   int u, v;
   newClique_.push_back((u = edge.first));
   newClique_.push_back((v = edge.second));
-  
+
   for (int i = 0; i < (int) adjList[u].size(); i++) {
     int y = adjList[u][i];
     //Check if the node y is also adjacent to v
@@ -74,11 +173,11 @@ void expandClique(const ii edge, const vector<vi> &adjList, vi &newClique_) {
     }
   }
 
-  printf("new clique\n");
+  /*printf("new clique\n");
   for (auto &x : newClique_) {
-    printf("%d ", x + 1);
+    printf("%d ", x);
   }  
-  puts("");
+  puts("");*/
 }
 
 void clq1(const vector<vi> &adjList, set<vi> &cliques) {
@@ -89,7 +188,7 @@ void clq1(const vector<vi> &adjList, set<vi> &cliques) {
   for (int u = 0; u < (int) adjList.size(); u++) {
     for (int j = 0; j < (int) adjList[u].size(); j++) {
       int v = adjList[u][j];
-      printf("looking edge %d %d\n", u + 1, v + 1);
+      //printf("looking edge %d %d\n", u, v);
       if ((marked.find(ii(u, v)) == marked.end()) && (marked.find(ii(v, u)) == marked.end())) {
         vi newClique_;
         expandClique(ii(u, v), adjList, newClique_);
@@ -108,18 +207,18 @@ void clq1(const vector<vi> &adjList, set<vi> &cliques) {
     }
   }
 
-  printf("The cliques are as follows:\n");
+  /*printf("The cliques are as follows:\n");
   for (const auto &clique_ : cliques) {
     for (int i = 0; i < (int) clique_.size(); i++) {
-      printf("%d ", clique_[i] + 1);
+      printf("%d ", clique_[i]);
     }
     puts("");
-  }
+  }*/
 }
 
 void runOptimization(vector<vi> &adj, set<vi> &cliques) {
   int nVertex = (int) adj.size();
-  int nvars = (int) (2 * adj.size());
+  int nvars = 0;
 
   GRBEnv env = GRBEnv();
   GRBModel model = GRBModel(env);
@@ -145,16 +244,11 @@ void runOptimization(vector<vi> &adj, set<vi> &cliques) {
     GRBLinExpr var_sideone;
     GRBLinExpr var_sidetwo;
     ostringstream cname_clique, cname_clique2;
-    cname_clique << "constr_clique_" << idx;
-    cname_clique2 << "const_clique2_" << idx;
-    idx++;
-    //cout << "looking at clique: ";
+    cname_clique << "constr_clique_" << idx++;
     for (int i = 0; i < (int) clique_.size(); i++) {
-      //printf("%d ", clique_[i] + 1);
-      var_sideone += vars[clique_[i]];
-      var_sidetwo += vars[clique_[i] + nVertex];
+      var_sideone += clique_[i];
+      var_sidetwo += clique_[i + nVertex];
     }
-    //puts("");
     model.addConstr(var_sideone <= 1.0, cname_clique.str());
     model.addConstr(var_sidetwo <= 1.0, cname_clique2.str());
   }
@@ -164,6 +258,17 @@ void runOptimization(vector<vi> &adj, set<vi> &cliques) {
   for (int var = 0; var < nvars; var++) {
     obj += vars[var];
   }
+
+  //------- Callback
+  ofstream logfile("cb.log");
+  if (!logfile.is_open()) {
+    cout << "Cannot open cb.log for callback message" << endl;
+    exit(1);
+  }
+  
+  mycallback cb = mycallback(nvars, vars, &logfile, adj);
+  
+  model.setCallback(&cb);
   
   model.setObjective(obj, GRB_MAXIMIZE);
   model.optimize();
@@ -173,16 +278,10 @@ void runOptimization(vector<vi> &adj, set<vi> &cliques) {
   if (status == GRB_OPTIMAL) {
     printf("Solution found is optimal!\n");
     vector<int> newVertex;
-    printf("First MIS:  ");
-    for (int var = 0; var < nvars / 2; var++) {
+    for (int var = 0; var < nvars; var++) {
       printf("%d ", (int) vars[var].get(GRB_DoubleAttr_X));
     }
-    puts("");
-    printf("Second MIS: ");
-    for (int var = nvars/2; var < nvars; var++) {
-      printf("%d ", (int) vars[var].get(GRB_DoubleAttr_X));
-    }
-    puts("");
+    printf("\n");
   }
 }
 
@@ -194,16 +293,17 @@ int main(int argc, char **argv) {
     exit(EXIT_FAILURE);
   }
 
-  try {
+  readGraph(argv[1], graph1);
+  clq1(graph1, cliques_main);
+  /*try {
     readGraph(argv[1], graph1);
     clq1(graph1, cliques_main);
-    runOptimization(graph1, cliques_main);
-  } catch (GRBException ex) {
+    } catch (GRBException ex) {
     cout << "Error code = " << ex.getErrorCode() << endl;
     cout << ex.getMessage() << endl;
-  } catch (...) {
+    } catch (...) {
     cout << "fora temer" << endl;
-  }
+    }*/
   
   return 0;
 }

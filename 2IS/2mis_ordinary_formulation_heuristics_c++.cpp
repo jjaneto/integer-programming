@@ -1,4 +1,4 @@
-// This file contains the original and pure 2MIS formulation
+// This file contains the original 2MIS formulation WITH HEURISTICS
 #include <fstream>
 #include <map>
 #include <set>
@@ -19,6 +19,82 @@ typedef vector<int> vi;
 
 vector<vi> graph1;
 int n, m;
+
+class mycallback: public GRBCallback {
+public:
+  double lastiter;
+  double lastnode;
+  int numvars;
+  GRBVar* vars;
+  ofstream* logfile;
+  vector<vi> adjList;
+  mycallback(int xnumvars, GRBVar* xvars, ofstream* xlogfile, vector<vi> &adjList) {
+    lastiter = lastnode = -GRB_INFINITY;
+    numvars = xnumvars;
+    vars = xvars;
+    logfile = xlogfile;
+    this->adjList = adjList;
+  }
+protected:
+  void callback () {
+    try {
+      if (where == GRB_CB_MIPNODE) {
+        if (getIntInfo(GRB_CB_MIPNODE_STATUS) == GRB_OPTIMAL) {
+          double* x = getNodeRel(vars, numvars);
+          RND1(x), RND2(x); //Apply the heuristics
+          setSolution(vars, x, numvars);
+          delete[] x;
+        }
+      }
+    } catch (GRBException e) {
+      cout << "Error number: " << e.getErrorCode() << endl;
+      cout << e.getMessage() << endl;
+    }    
+  }
+
+private:
+  //-----------------------Heuristics----------------------------
+  //Set to 1.0 the selected variable and to 0.0 all its adjacents
+  void RND1(double *variables) {
+    double varValue = 0.0;
+    int indexVar = -1;
+    for (int i = 0 ; i < numvars; i++) {
+      if (variables[i] < 1.0 && (variables[i] > varValue)) {
+        indexVar = i;
+        varValue = variables[i];
+      }
+    }
+
+    variables[indexVar] = 1.0;
+    for (int i = 0; i < (int) adjList[indexVar].size(); i++) {
+      variables[adjList[indexVar][i]] = 0.0;
+    }    
+  }
+  
+  void RND2(double *variables) {
+    double varValue = numeric_limits<double>::max();
+    int indexVar = -1;
+    for (int i = 0; i < numvars; i++) {
+      if (variables[i] > 0.0 && variables[i] < 1.0) {
+        double sum = variables[i];
+        for (int j = 0; j < (int) adjList[i].size(); j++) {
+          sum += variables[adjList[i][j]];
+        }
+
+        if (sum < varValue) {
+          indexVar = i;
+          varValue = sum;
+        }
+      }
+    }
+
+    variables[indexVar] = 1.0;
+    for (int i = 0; i < (int) adjList[indexVar].size(); i++) {
+      variables[adjList[indexVar][i]] = 0.0;
+    }
+  }
+  //-----------------------Heuristics----------------------------
+};
 
 void printGraph(vector<vi> &adjList) {
   for (int i = 0; i < (int) adjList.size(); i++) {
@@ -50,7 +126,7 @@ void readGraph(char *name, vector<vi> &adjList) {
     scanf("%d %d", &u, &v);
     u--, v--;
     adjList[u].push_back(v);
-    adjList[v].push_back(u); //TODO: Is it necessary add this?
+    adjList[v].push_back(u);
   }
 }
 
@@ -84,7 +160,6 @@ void runOptimization(vector<vi> &adj) {
       ostringstream cname, cname2;
       cname << "constr_1_" << (i * n) + v;
       cname2 << "constr_2_" << (i * n) + v;
-      //printf("adding (%d, %d), (%d, %d)\n", i, v, (i + nVertex), (v + nVertex));
       model.addConstr(vars[i] + vars[v] <= 1.0, cname.str());
       model.addConstr(vars[i + nVertex] + vars[v + nVertex] <= 1.0, cname2.str());
     }
@@ -95,7 +170,18 @@ void runOptimization(vector<vi> &adj) {
   for (int var = 0; var < nvars; var++) {
     obj += vars[var];
   }
+
+  //------- Callback
+  ofstream logfile("cb.log");
+  if (!logfile.is_open()) {
+    cout << "Cannot open cb.log for callback message" << endl;
+    exit(1);
+  }
   
+  mycallback cb = mycallback(nvars, vars, &logfile, adj);
+  
+  model.setCallback(&cb);
+    
   model.setObjective(obj, GRB_MAXIMIZE);
   model.optimize();
 
@@ -104,16 +190,10 @@ void runOptimization(vector<vi> &adj) {
   if (status == GRB_OPTIMAL) {
     printf("Solution found is optimal!\n");
     vector<int> newVertex;
-    printf("First MIS:  ");
-    for (int var = 0; var < nvars / 2; var++) {
+    for (int var = 0; var < nvars; var++) {
       printf("%d ", (int) vars[var].get(GRB_DoubleAttr_X));
     }
-    puts("");
-    printf("Second MIS: ");
-    for (int var = nvars/2; var < nvars; var++) {
-      printf("%d ", (int) vars[var].get(GRB_DoubleAttr_X));
-    }
-    puts("");
+    printf("\n");
   }
 }
 
