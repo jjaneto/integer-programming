@@ -48,7 +48,7 @@ protected:
         if (getIntInfo(GRB_CB_MIPNODE_STATUS) == GRB_OPTIMAL) {
           double* x = getNodeRel(vars, numvars);
           double* y = getNodeRel(vars, numvars); 
-          RND1(x);//, RND2(y); //Apply the heuristics
+          RND1(x), RND2(y); //Apply the heuristics
           int sum1 = 0, sum2 = 0;
           for (int i = 0; i < numvars; i++) {
             sum1 += ((int) x[i]);
@@ -70,129 +70,90 @@ protected:
 private:
   bool isEveryoneIsZeroOrOne(double *variables) {
     for (int i = 0; i < numvars; i++) {
-      if (variables[i] != 0.0 && variables[i] != 1.0)
+      if (variables[i] != 0.0 && variables[i] != 1.0) {
+        //printf("var %d is %.2lf\n", i, variables[i]);
         return false;
+      }
     }
+    //printf("all right\n");
     return true;
   }
   //-----------------------Heuristics----------------------------
   //Set to 1.0 the selected variable and to 0.0 all its adjacents (for each MIS)
-  void RND1(double *variables, int l, int r) {
-    //cout << "rnd1 " << " " << l << " " << r << endl;
-    /*puts("Variables now");
-    for (int i = l; i <  r; i++) {
-      printf("%.2lf ", variables[i]);
+  void RND1(double *vars) {
+    //cout << "begin rnd1" << endl;
+    double variables[numvars];
+    for (int i = 0; i < numvars; i++) {
+      variables[i] = vars[i];
     }
-    puts(" ");*/
-    double value = numeric_limits<double>::lowest();
-    int idx = -100;
-    int factor = (r == numvars / 2 ? r : -(r/2));
-    for (int i = l; i < r; i++) {
-      if (variables[i] < 1.0 && variables[i] > value) {
-        if (variables[i] >= variables[i + factor]) {
-          value = variables[i];
+    while (!isEveryoneIsZeroOrOne(variables)){
+      double value = numeric_limits<double>::lowest();
+      int idx = -100;
+
+      for (int i = 0; i < numvars; i++) {
+        if (variables[i] < 1.0 && variables[i] > value) {
           idx = i;
+          value = variables[i];
+        }
+      }
+
+      variables[idx] = 1.0;
+      if (idx >= nVertex) {
+        variables[idx - nVertex] = 0.0;
+        for (const auto &v : adjList[idx - nVertex]) {
+          variables[v + nVertex] = 0.0;
+        }
+      } else {
+        variables[idx + nVertex] = 0.0;
+        for (const auto &v : adjList[idx]) {
+          variables[v] = 0.0;
         }
       }
     }
-
-    //printf("%d %d\n", idx, factor);
-    if (idx == -100) {
-      return;
-    }
-
-    assert((idx + factor >= 0 && idx + factor < numvars));
-    variables[idx] = 1.0;
-    variables[idx + factor] = 0.0;
-
-    if (factor == (numvars / 2)) { //Se estou no primeiro conjunto
-      for (const auto &v : adjList[idx]) {
-        variables[v] = 0.0;
-      }
-    } else {
-      for (const auto &v : adjList[idx + factor]) { //Se estou no segundo conjunto
-        variables[v - factor] = 0.0;
-      }
-    }
-
-    
   }
-  void RND1(double *vars) {
+
+  void RND2(double *vars) {
+    //cout << "begin rnd2" << endl;
     double variables[numvars];
     for (int i = 0; i < numvars; i++) {
       variables[i] = vars[i];
     }
     while (!isEveryoneIsZeroOrOne(variables)) {
-      RND1(variables, 0, numvars / 2);
-      RND1(variables, numvars / 2, numvars);
-    }
-  }
-  
-  void RND2(double *variables, int l, int r) {
-    //cout << "rnd2 " << l << " " << r << endl;
-    /*puts("Variables now");
-    for (int i = l; i < r; i++) {
-      printf("%.2lf ", variables[i]);
-    }
-    puts(" ");*/
-    double value = numeric_limits<double>::max();
-    int idx = -100;
-    int factor = (r == numvars / 2 ? r : -(r/2));
-    for (int i = l; i < r; i++) {
-      //printf("i == %d variable has %.2lf\n", i, variables[i]);
-      if (variables[i] > 0.0 && variables[i] < 1.0) {
-        //printf("LOOKING VARIABLES\n");
-        if (variables[i + factor] == 0 || variables[i] <= variables[i + factor]) {
-          //printf("START SUM\n");
+      double value = numeric_limits<double>::max();
+      int idx = -100;
+
+      for (int i = 0; i < numvars; i++) {
+        if (variables[i] > 0.0 && variables[i] < 1.0) {
           double sum = variables[i];
-          if (factor == (numvars / 2)) {
-            for (const auto &v : adjList[i]) {
-              sum += variables[v];
+          if (i >= nVertex) {
+            for (const auto &v : adjList[i - nVertex]) {
+              sum += variables[v + nVertex];
             }
           } else {
-            for (const auto &v : adjList[i + factor]) {
-              sum += variables[v - factor];
+            for (const auto &v : adjList[i]) {
+              sum += variables[v];
             }
           }
 
           if (sum < value) {
-            //printf("SUM %lf\n", sum);
-            value = sum;
             idx = i;
-          } else {
-            //printf("sum foi %lf\n", sum);
+            value = sum;
           }
-        } else {
-          //printf ("----- cannot start sum because %.2lf %.2lf\n", variables[i], variables[i + factor]);
         }
       }
-    }
 
-    if (idx == -100)
-        return;
-    
-    assert(idx >= 0 && (idx + factor >= 0 && idx + factor < numvars));
-    variables[idx] = 1.0;
-    variables[idx + factor] = 0.0;
-    if (factor == (numvars / 2)) { //Se estou no primeiro conjunto
-      for (const auto &v : adjList[idx]) {
+      variables[idx] = 1.0;
+      if (idx >= nVertex) {
+        variables[idx - nVertex] = 0.0;
+        for (const auto &v : adjList[idx - nVertex]) {
+          variables[v + nVertex] = 0.0;
+        }
+      } else {
+        variables[idx + nVertex] = 0.0;
+        for (const auto &v : adjList[idx]) {
           variables[v] = 0.0;
-      }
-    } else {
-      for (const auto &v : adjList[idx + factor]) { //Se estou no segundo conjunto
-        variables[v - factor] = 0.0;
-      }
-    }
-  }
-  
-  void RND2(double *vars) {
-    double variables[numvars];
-    for (int i = 0; i < numvars; i++) {
-      variables[i] = vars[i];
-    }
-    while (!isEveryoneIsZeroOrOne(variables)) {
-      RND2(variables, 0, numvars / 2);
-      RND2(variables, numvars / 2, numvars);
+        }
+      }      
     }
   }
 //-----------------------Heuristics----------------------------
