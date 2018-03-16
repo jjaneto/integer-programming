@@ -1,1 +1,1 @@
-# interger-programming
+# integer-programming
