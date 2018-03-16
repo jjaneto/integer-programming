@@ -138,7 +138,6 @@ private:
           }
 
           if (sum < value) {
-            exit(10);
             value = sum;
             idx = i;
           }
