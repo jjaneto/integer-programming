@@ -48,7 +48,7 @@ protected:
         if (getIntInfo(GRB_CB_MIPNODE_STATUS) == GRB_OPTIMAL) {
           double* x = getNodeRel(vars, numvars);
           double* y = getNodeRel(vars, numvars); 
-          RND1(x), RND2(y); //Apply the heuristics
+          RND1(x);//, RND2(y); //Apply the heuristics
           int sum1 = 0, sum2 = 0;
           for (int i = 0; i < numvars; i++) {
             sum1 += ((int) x[i]);
@@ -78,18 +78,25 @@ private:
   //-----------------------Heuristics----------------------------
   //Set to 1.0 the selected variable and to 0.0 all its adjacents (for each MIS)
   void RND1(double *variables, int l, int r) {
+    //cout << "rnd1 " << " " << l << " " << r << endl;
+    /*puts("Variables now");
+    for (int i = l; i <  r; i++) {
+      printf("%.2lf ", variables[i]);
+    }
+    puts(" ");*/
     double value = numeric_limits<double>::lowest();
     int idx = -100;
     int factor = (r == numvars / 2 ? r : -(r/2));
     for (int i = l; i < r; i++) {
       if (variables[i] < 1.0 && variables[i] > value) {
-        if (variables[i] > variables[i + factor]) {
+        if (variables[i] >= variables[i + factor]) {
           value = variables[i];
           idx = i;
         }
       }
     }
 
+    //printf("%d %d\n", idx, factor);
     if (idx == -100) {
       return;
     }
@@ -107,6 +114,8 @@ private:
         variables[v - factor] = 0.0;
       }
     }
+
+    
   }
   void RND1(double *vars) {
     double variables[numvars];
@@ -120,12 +129,21 @@ private:
   }
   
   void RND2(double *variables, int l, int r) {
+    //cout << "rnd2 " << l << " " << r << endl;
+    /*puts("Variables now");
+    for (int i = l; i < r; i++) {
+      printf("%.2lf ", variables[i]);
+    }
+    puts(" ");*/
     double value = numeric_limits<double>::max();
     int idx = -100;
     int factor = (r == numvars / 2 ? r : -(r/2));
     for (int i = l; i < r; i++) {
+      //printf("i == %d variable has %.2lf\n", i, variables[i]);
       if (variables[i] > 0.0 && variables[i] < 1.0) {
-        if (variables[i] < variables[i + factor]) {
+        //printf("LOOKING VARIABLES\n");
+        if (variables[i + factor] == 0 || variables[i] <= variables[i + factor]) {
+          //printf("START SUM\n");
           double sum = variables[i];
           if (factor == (numvars / 2)) {
             for (const auto &v : adjList[i]) {
@@ -138,26 +156,31 @@ private:
           }
 
           if (sum < value) {
+            //printf("SUM %lf\n", sum);
             value = sum;
             idx = i;
+          } else {
+            //printf("sum foi %lf\n", sum);
           }
+        } else {
+          //printf ("----- cannot start sum because %.2lf %.2lf\n", variables[i], variables[i + factor]);
         }
       }
+    }
 
-      if (idx == -100)
+    if (idx == -100)
         return;
-
-      assert(idx >= 0 && (idx + factor >= 0 && idx + factor < numvars));
-      variables[idx] = 1.0;
-      variables[idx + factor] = 0.0;
-      if (factor == (numvars / 2)) { //Se estou no primeiro conjunto
-        for (const auto &v : adjList[idx]) {
+    
+    assert(idx >= 0 && (idx + factor >= 0 && idx + factor < numvars));
+    variables[idx] = 1.0;
+    variables[idx + factor] = 0.0;
+    if (factor == (numvars / 2)) { //Se estou no primeiro conjunto
+      for (const auto &v : adjList[idx]) {
           variables[v] = 0.0;
-        }
-      } else {
-        for (const auto &v : adjList[idx + factor]) { //Se estou no segundo conjunto
-          variables[v - factor] = 0.0;
-        }
+      }
+    } else {
+      for (const auto &v : adjList[idx + factor]) { //Se estou no segundo conjunto
+        variables[v - factor] = 0.0;
       }
     }
   }
@@ -172,7 +195,7 @@ private:
       RND2(variables, numvars / 2, numvars);
     }
   }
-  //-----------------------Heuristics----------------------------
+//-----------------------Heuristics----------------------------
 };
 
 
