@@ -77,7 +77,7 @@ private:
   void RND1(double *variables, int l, int r) {
     double value = numeric_limits<double>::lowest();
     int idx = -100;
-    int factor = (r == numvars / 2 ? r : -r);
+    int factor = (r == numvars / 2 ? r : -(r/2));
     for (int i = l; i < r; i++) {
       if (variables[i] < 1.0 && variables[i] > value) {
         if (variables[i] > variables[i + factor]) {
@@ -87,7 +87,11 @@ private:
       }
     }
 
-    assert(idx >= 0 && (idx + factor >= 0 && idx + factor < numvars));
+    if (idx == -100) {
+      return;
+    }
+
+    assert((idx + factor >= 0 && idx + factor < numvars));
     variables[idx] = 1.0;
     variables[idx + factor] = 0.0;
 
@@ -96,12 +100,16 @@ private:
         variables[v] = 0.0;
       }
     } else {
-      for (const auto &v : adjList[idx - factor]) { //Se estou no segundo conjunto
+      for (const auto &v : adjList[idx + factor]) { //Se estou no segundo conjunto
         variables[v - factor] = 0.0;
       }
     }
   }
-  void RND1(double *variables) {
+  void RND1(double *vars) {
+    double variables[numvars];
+    for (int i = 0; i < numvars; i++) {
+      variables[i] = vars[i];
+    }
     while (!isEveryoneIsZeroOrOne(variables)) {
       RND1(variables, 0, numvars / 2);
       RND1(variables, numvars / 2, numvars);
@@ -111,7 +119,7 @@ private:
   void RND2(double *variables, int l, int r) {
     double value = numeric_limits<double>::max();
     int idx = -100;
-    int factor = (r == numvars / 2 ? r : -r);
+    int factor = (r == numvars / 2 ? r : -(r/2));
     for (int i = l; i < r; i++) {
       if (variables[i] > 0.0 && variables[i] < 1.0) {
         if (variables[i] < variables[i + factor]) {
@@ -122,16 +130,20 @@ private:
             }
           } else {
             for (const auto &v : adjList[i + factor]) {
-              sum += variables[v];
+              sum += variables[v - factor];
             }
           }
 
-          if (sum > value) {
+          if (sum < value) {
+            exit(10);
             value = sum;
             idx = i;
           }
         }
       }
+
+      if (idx == -100)
+        return;
 
       assert(idx >= 0 && (idx + factor >= 0 && idx + factor < numvars));
       variables[idx] = 1.0;
@@ -141,19 +153,25 @@ private:
           variables[v] = 0.0;
         }
       } else {
-        for (const auto &v : adjList[idx - factor]) { //Se estou no segundo conjunto
+        for (const auto &v : adjList[idx + factor]) { //Se estou no segundo conjunto
           variables[v - factor] = 0.0;
         }
       }
     }
   }
   
-  void RND2(double *variables) {   
+  void RND2(double *vars) {
+    double variables[numvars];
+    for (int i = 0; i < numvars; i++) {
+      variables[i] = vars[i];
+    }
     while (!isEveryoneIsZeroOrOne(variables)) {
       RND2(variables, 0, numvars / 2);
       RND2(variables, numvars / 2, numvars);
     }
   }
+  //-----------------------Heuristics----------------------------
+
 };
 
 void printGraph(vector<vi> &adjList) {

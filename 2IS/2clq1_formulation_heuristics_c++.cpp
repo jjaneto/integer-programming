@@ -48,7 +48,7 @@ protected:
         if (getIntInfo(GRB_CB_MIPNODE_STATUS) == GRB_OPTIMAL) {
           double* x = getNodeRel(vars, numvars);
           double* y = getNodeRel(vars, numvars); 
-          RND1(x);//, RND2(y); //Apply the heuristics
+          RND1(x), RND2(y); //Apply the heuristics
           int sum1 = 0, sum2 = 0;
           for (int i = 0; i < numvars; i++) {
             sum1 += ((int) x[i]);
@@ -78,12 +78,6 @@ private:
   //-----------------------Heuristics----------------------------
   //Set to 1.0 the selected variable and to 0.0 all its adjacents (for each MIS)
   void RND1(double *variables, int l, int r) {
-    cout << "rnd1 " << l << " " << r << '\n';
-    puts("The variables are:");
-    for (int i = l; i < r; i++) {
-      printf("%.2lf ", variables[i]);
-    }
-    puts("");
     double value = numeric_limits<double>::lowest();
     int idx = -100;
     int factor = (r == numvars / 2 ? r : -(r/2));
@@ -100,7 +94,6 @@ private:
       return;
     }
 
-    //printf("idx %d factor %d\n", idx, factor);
     assert((idx + factor >= 0 && idx + factor < numvars));
     variables[idx] = 1.0;
     variables[idx + factor] = 0.0;
@@ -117,12 +110,9 @@ private:
   }
   void RND1(double *vars) {
     double variables[numvars];
-    puts("all variables");
     for (int i = 0; i < numvars; i++) {
       variables[i] = vars[i];
-      printf("%.2lf ", vars[i]);
     }
-    puts("");
     while (!isEveryoneIsZeroOrOne(variables)) {
       RND1(variables, 0, numvars / 2);
       RND1(variables, numvars / 2, numvars);
@@ -130,20 +120,12 @@ private:
   }
   
   void RND2(double *variables, int l, int r) {
-    cout << "rnd2 " << l << " " << r << '\n';
     double value = numeric_limits<double>::max();
     int idx = -100;
     int factor = (r == numvars / 2 ? r : -(r/2));
-    puts("The variables are:");
-    for (int i = l; i < r; i++) {
-      printf("%.2lf ", variables[i]);
-    }
-    puts("");
     for (int i = l; i < r; i++) {
       if (variables[i] > 0.0 && variables[i] < 1.0) {
-        //printf("oi!\n");
         if (variables[i] < variables[i + factor]) {
-          //printf("KKKKK \n");
           double sum = variables[i];
           if (factor == (numvars / 2)) {
             for (const auto &v : adjList[i]) {
@@ -155,7 +137,6 @@ private:
             }
           }
 
-          //printf("SUM %.2lf\n", sum);
           if (sum < value) {
             exit(10);
             value = sum;
@@ -164,7 +145,6 @@ private:
         }
       }
 
-      printf("%d %d\n", idx, factor);
       if (idx == -100)
         return;
 
@@ -185,12 +165,9 @@ private:
   
   void RND2(double *vars) {
     double variables[numvars];
-    puts("all variables");
     for (int i = 0; i < numvars; i++) {
       variables[i] = vars[i];
-      printf("%.2lf ", vars[i]);
     }
-    puts("");
     while (!isEveryoneIsZeroOrOne(variables)) {
       RND2(variables, 0, numvars / 2);
       RND2(variables, numvars / 2, numvars);
