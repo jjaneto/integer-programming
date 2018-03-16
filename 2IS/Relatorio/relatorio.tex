@@ -11,7 +11,8 @@
 }
 
 \usepackage{pslatex}
-\usepackage{setspace} 
+\usepackage{setspace}
+\usepackage{amssymb}
 
 \setstretch{1.5}
 
@@ -23,42 +24,62 @@
 
 \maketitle
 
-\section{Conjunto Independente de Vértices}
+\section{Introdução}
 
-Dado um grafo simples $G(V, A)$ um \textbf{Conjunto Independente de Vértices} - \textit{Independent Set} - é um subconjunto $X \subseteq V$ de vértices tal que para todo par de vértice $u, v \in X$ não há uma aresta $(u, v)$ no grafo original. 
-O problema do \textbf{Conjunto Máximo Independente de Vértices} - \textit{Maximum Independent Set} (MIS) - é um problema que consiste em achar o conjunto máximo (isto é, que não dá para ser expandido) de vértices independentes. 
-Esse problema é $\mathcal{NP}$-Difícil para grafos em geral, o que proporcionou diversos estudos na literatura sobre como achar tais conjuntos em um tempo viável. Tais estudos levam em consideração modelagens exatas ou heurísticas, na tentativa de geração de soluções.
+\section{O problema do 2 Conjuntos Independentes de Vértices}
 
-Uma formulação inteira para o MIS é denotada por IP:MIS e é computada por
+Dado um grafo simples $G(V, A)$, onde $V$ é o conjunto de vértices e $A$ é o conjunto de arestas, define-se o problema de 2 Cojuntos Independentes de Vértices (2MIS) como sendo o problema de determinar dois conjuntos independentes de vértices em $G$, tal que a soma desses dois conjuntos seja máxima e os conjuntos sejam distintos.
+Cada conjunto independente é, na verdade, um subconjunto $B \subseteq V$ tal que não existe aresta $(u, v)$ que liga os vértices $u$ e $v$. Em outras palavras, $B$ é um subconjunto de vértices não adjacentes. Para serem considerados distintos, dois conjuntos independentes não devem possuir o mesmo vértice pertencente ao mesmo tempo nos dois conjuntos. Isso significa que, dado um segundo conjunto independente $D$, $B \cap D = \emptyset$.
 
-\begin{align*}	
-  \max\quad        & \sum_{u \in V} u_i                                                          \\
-  \text{s.a.\quad} & u_i + u_j \leq 1 &  \forall (u, v) \in A  								 \\
-                   & u_i \in \{0, 1\} & \forall u \in V,
-\end{align*}
+O restante desse trabalho irá apresentar uma formulação inteira para o 2MIS, na qual uma irá trabalhar sob as arestas de $G$, enquanto que a outra trabalha baseada nas cliques maximais de $G$. Ainda, para a obtenção de soluções de forma mais eficiente, e que essas soluções sejam primais, também são apresentadas duas heurísticas. Todas essas definições foram implementadas nos experimentos.  
+
+\subsection{Formulação Original}
+
+O problema é caracterizado por definir dois conjuntos independentes, $\alpha$ e $\beta$, pertencentes ao grafo $G(V, A)$, tais que sejam distintos e máximos. Ele pode ser definido da seguinte forma:
+
+\begin{equation*}
+\begin{array}{ll@{}ll}
+\text{maximize}  & \displaystyle(\sum\limits_{i \in \alpha} x_{i}\ +\ \sum\limits_{j \in \beta}y_j)\\
+\text{sujeito a }& \displaystyle x_u + x_v \leq 1 &\forall \ (x_u, x_v) \in A & (1) \\
+                 & \displaystyle y_j + y_i \leq 1 &\forall \ (y_j, y_i) \in A & (2) \\
+                 & \displaystyle x_u + y_u \leq 1 &\forall \ u \in \alpha \wedge u \in \beta & (3)\\
+                 & \displaystyle x_i \wedge y_j \in \{0,1\} &\forall \ i \in \alpha \wedge \forall \ j \in \beta & (4),
+\end{array}
+\end{equation*}
 
 \noindent
-onde $u_i$ tem valor $1$ se e somente se ele pertence ao conjunto independente.
+onde $x_i = 1$ ou $y_j = 1$ somente se $i$ ou $j$ fizerem parte de seus respectivos conjuntos independentes, $\alpha$ e $\beta$ ($4$). As restrições $(1)$ e $(2)$ garantem que os dois conjuntos são independentes, enquanto que a $(3)$ assegura que os conjuntos são distintos, isto é, dado um vértice $u \in V$, então ele estará no máximo em um dos dois conjuntos ($x_u + y_u \leq 1$).
 
-O problema de achar \textsl{dois} conjuntos independentes de vértices ($2IS$) é definido de forma similar: a solução gerada deve retornar dois conjuntos independentes e disjuntos. 
-Essa variante possui modelagem similar, uma vez que o método usado para gerar a solução é bastante semelhante. 
-Uma vez que um conjunto foi gerado, exclui-se os vértices que o compõe, e tenta-se achar um novo conjunto com o novo grafo, gerado a partir da exclusão dos vértices. Ao final, se o grafo for viável, haverão dois conjuntos independentes.
+\subsection{Formulação com Cliques}
 
-\section{Experimentos}
+É possível formular o problema do 2MIS usando cliques. Uma clique é um subconjunto de vértices $X \subseteq V$ tal que todos os pares de vértices são ligados entre si. Em outras palavras, o grafo induzido por $X$ é completo. Um conjunto independente de vértice não contém mais de um vértice em cada clique. Portanto, dado uma clique $C$, têm-se que $\sum_{u \in C}x_u \leq 1$ para todas as cliques $C$ pertencentes a $G$. Adaptando essa formulação para o problema do 2MIS:
 
-Os experimentos consistiram na realização de quatro tarefas diferentes. Todos os experimentos realizados nesse trabalho usou o resolvedor Gurobi para todas as modelagens lineares aqui propostas, sendo que a complexidade do modelo aumentava à medida que as tarefas evoluíam. 
-Primeiramente, construiu-se o modelo do problema $2IS$ apresentado anteriormente e foram realizados testes com a finalidade de observar as respostas e o tempo de execução consumido para a geração da solução. Depois, a modelagem foi adaptada para a rotina CLQ1, na tentativa de achar soluções viáveis e que fossem ótimas.
+\begin{equation*}
+\begin{array}{ll@{}ll}
+\text{maximize}  & \displaystyle(\sum\limits_{i \in \alpha} x_{i}\ +\ \sum\limits_{j \in \beta}y_j)\\
+\text{sujeito a }& \displaystyle \sum\limits_{i \in C} x_i \leq 1 &\forall \ cliques \ C \in \alpha & (1) \\
+                 & \displaystyle \sum\limits_{j \in C} x_j \leq 1 &\forall \ cliques \ C \in \beta & (2) \\
+                 & \displaystyle x_u + y_u \leq 1 &\forall \ u \in \alpha \wedge u \in \beta & (3)\\
+                 & \displaystyle x_i \wedge y_j \in \{0,1\} &\forall \ i \in \alpha \wedge \forall \ j \in \beta & (4),
+\end{array}
+\end{equation*}
 
-Com o objetivo de verificar o impacto (no modelo e na otimização) da inserção de rotinas de corte, um algoritmo de \textit{Branch-and-Cut} (B\&C) foi gerado e comparado com os resultados já obtidos anteriormente. 
-Por ultimo, foram implementadas as heurísticas primais na tentativa de achar boas soluções viáveis ao problema do $2IS$.
+\section{Heurísticas}
 
-\subsection{Modelagem Básica}
-\subsection{Rotina CLQ1}
-\subsection{Branch-and-Cut}
-\subsection{Heurísticas}
+Heurísticas permitem que sejam obtidas soluções primais a partir do arredondamento de variáveis fracionárias de soluções lineares ótimas. O arredondamento dá-se a partir da escolha de um vértice $v$ com $x_v$ fracional e atribuindo o valor $x_v = 1$ para ele e $x_u = 0$ para todos os seus adjacentes. Esse processo é executado até que $x_v = \{0, 1\}$ para todos os $v$ dos dois conjuntos. Duas heurísticas são aplicadas, descritas a seguir:
 
-\section{Conclusões}
+\begin{description}
+\item[RND1]: selecione uma variável que maximiza $\{x_v : x_v < 1\}$
+\item[RND2]: selecione uma variável que minimiza $\{x_v + \sum\limits_{(x_v, x_u) \in A}x_u : 0 < x_v < 1\}$
+\end{description}
 
+Após as duas heurísticas serem aplicadas, suas soluções são comparadas, e a que maximiza a função objetivo é escolhida.
+
+\section{Implementação}
+
+Todos os códigos implementados possuem um esquema padrão para as suas respectivas execuções. Para compilar, basta inserir o comando \textsl{make} no diretório dos códigos-fonte. Após a compilação, basta digitar o modo a ser testado (formulação original, com clique, com ou sem heurísticas, etc) e o caminho para a instância, a qual já está dentro do diretório.
+
+Os algoritmos são divididos em fases, sendo estas (i) de leitura do grafo, (ii) pré-processamento (no caso das cliques) e (iii) execução, seguida pelo resultado, o qual irá ilustrar os dois conjuntos independentes computados.
 
 
 

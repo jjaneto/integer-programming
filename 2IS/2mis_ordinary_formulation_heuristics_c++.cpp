@@ -1,4 +1,5 @@
 // This file contains the original 2MIS formulation WITH HEURISTICS
+#include <assert.h>
 #include <fstream>
 #include <map>
 #include <set>
@@ -28,12 +29,14 @@ public:
   GRBVar* vars;
   ofstream* logfile;
   vector<vi> adjList;
+  int nVertex;
   mycallback(int xnumvars, GRBVar* xvars, ofstream* xlogfile, vector<vi> &adjList) {
     lastiter = lastnode = -GRB_INFINITY;
     numvars = xnumvars;
     vars = xvars;
     logfile = xlogfile;
     this->adjList = adjList;
+    nVertex = (int) adjList.size();
   }
 protected:
   void callback () {
@@ -41,9 +44,18 @@ protected:
       if (where == GRB_CB_MIPNODE) {
         if (getIntInfo(GRB_CB_MIPNODE_STATUS) == GRB_OPTIMAL) {
           double* x = getNodeRel(vars, numvars);
-          RND1(x), RND2(x); //Apply the heuristics
-          setSolution(vars, x, numvars);
+          double* y = getNodeRel(vars, numvars); 
+          RND1(x), RND2(y); //Apply the heuristics
+          int sum1 = 0, sum2 = 0;
+          for (int i = 0; i < numvars; i++) {
+            sum1 += (int) x[i];
+            sum2 += (int) y[i];
+          }
+          if (sum1 > sum2) {
+            setSolution(vars, x, numvars);
+          } else setSolution(vars, y, numvars);
           delete[] x;
+          delete[] y;          
         }
       }
     } catch (GRBException e) {
@@ -53,47 +65,95 @@ protected:
   }
 
 private:
+  bool isEveryoneIsZeroOrOne(double *variables) {
+    for (int i = 0; i < numvars; i++) {
+      if (variables[i] != 0.0 && variables[i] != 1.0)
+        return false;
+    }
+    return true;
+  }
   //-----------------------Heuristics----------------------------
-  //Set to 1.0 the selected variable and to 0.0 all its adjacents
-  void RND1(double *variables) {
-    double varValue = 0.0;
-    int indexVar = -1;
-    for (int i = 0 ; i < numvars; i++) {
-      if (variables[i] < 1.0 && (variables[i] > varValue)) {
-        indexVar = i;
-        varValue = variables[i];
+  //Set to 1.0 the selected variable and to 0.0 all its adjacents (for each MIS)
+  void RND1(double *variables, int l, int r) {
+    double value = numeric_limits<double>::lowest();
+    int idx = -100;
+    int factor = (r == numvars / 2 ? r : -r);
+    for (int i = l; i < r; i++) {
+      if (variables[i] < 1.0 && variables[i] > value) {
+        if (variables[i] > variables[i + factor]) {
+          value = variables[i];
+          idx = i;
+        }
       }
     }
 
-    variables[indexVar] = 1.0;
-    for (int i = 0; i < (int) adjList[indexVar].size(); i++) {
-      variables[adjList[indexVar][i]] = 0.0;
-    }    
+    assert(idx >= 0 && (idx + factor >= 0 && idx + factor < numvars));
+    variables[idx] = 1.0;
+    variables[idx + factor] = 0.0;
+
+    if (factor == (numvars / 2)) { //Se estou no primeiro conjunto
+      for (const auto &v : adjList[idx]) {
+        variables[v] = 0.0;
+      }
+    } else {
+      for (const auto &v : adjList[idx - factor]) { //Se estou no segundo conjunto
+        variables[v - factor] = 0.0;
+      }
+    }
+  }
+  void RND1(double *variables) {
+    while (!isEveryoneIsZeroOrOne(variables)) {
+      RND1(variables, 0, numvars / 2);
+      RND1(variables, numvars / 2, numvars);
+    }
   }
   
-  void RND2(double *variables) {
-    double varValue = numeric_limits<double>::max();
-    int indexVar = -1;
-    for (int i = 0; i < numvars; i++) {
+  void RND2(double *variables, int l, int r) {
+    double value = numeric_limits<double>::max();
+    int idx = -100;
+    int factor = (r == numvars / 2 ? r : -r);
+    for (int i = l; i < r; i++) {
       if (variables[i] > 0.0 && variables[i] < 1.0) {
-        double sum = variables[i];
-        for (int j = 0; j < (int) adjList[i].size(); j++) {
-          sum += variables[adjList[i][j]];
-        }
+        if (variables[i] < variables[i + factor]) {
+          double sum = variables[i];
+          if (factor == (numvars / 2)) {
+            for (const auto &v : adjList[i]) {
+              sum += variables[v];
+            }
+          } else {
+            for (const auto &v : adjList[i + factor]) {
+              sum += variables[v];
+            }
+          }
 
-        if (sum < varValue) {
-          indexVar = i;
-          varValue = sum;
+          if (sum > value) {
+            value = sum;
+            idx = i;
+          }
+        }
+      }
+
+      assert(idx >= 0 && (idx + factor >= 0 && idx + factor < numvars));
+      variables[idx] = 1.0;
+      variables[idx + factor] = 0.0;
+      if (factor == (numvars / 2)) { //Se estou no primeiro conjunto
+        for (const auto &v : adjList[idx]) {
+          variables[v] = 0.0;
+        }
+      } else {
+        for (const auto &v : adjList[idx - factor]) { //Se estou no segundo conjunto
+          variables[v - factor] = 0.0;
         }
       }
     }
-
-    variables[indexVar] = 1.0;
-    for (int i = 0; i < (int) adjList[indexVar].size(); i++) {
-      variables[adjList[indexVar][i]] = 0.0;
+  }
+  
+  void RND2(double *variables) {   
+    while (!isEveryoneIsZeroOrOne(variables)) {
+      RND2(variables, 0, numvars / 2);
+      RND2(variables, numvars / 2, numvars);
     }
   }
-  //-----------------------Heuristics----------------------------
 };
 
 void printGraph(vector<vi> &adjList) {
@@ -111,22 +171,31 @@ void readGraph(char *name, vector<vi> &adjList) {
 
   if (instanceFile == NULL) {
     printf("File cannot be open! Ending the program...\n");
-    exit(-1);
+    exit(10);
   }
 
   char s, t[30];
   scanf("%c %s", &s, t);
   scanf("%d %d", &n, &m);
+  printf("%c %s %d %d\n", s, t, n, m);
   printf("There is %d vertex and %d edges. The array have size of %d\n", n, m, (n * m));
 
   adjList.assign(n, vi());
 
+  int szName = strlen(name);
+  bool clq = (name[szName - 1] == 'q' && name[szName - 2] == 'l' && name[szName - 3] == 'c');
+
   for (int i = 0; i < m; i += 1) {
-    int u, v;
-    scanf("%d %d", &u, &v);
+    int u = 0, v = 0; char c = '\0';
+    
+    if (clq) {
+      scanf(" %c %d %d\n", &c, &u, &v);
+    } else{
+      scanf("%d %d\n", &u, &v);
+    }
     u--, v--;
     adjList[u].push_back(v);
-    adjList[v].push_back(u);
+    adjList[v].push_back(u); //TODO: Is it necessary add this?
   }
 }
 

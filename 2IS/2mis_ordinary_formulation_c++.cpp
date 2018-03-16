@@ -35,20 +35,34 @@ void readGraph(char *name, vector<vi> &adjList) {
 
   if (instanceFile == NULL) {
     printf("File cannot be open! Ending the program...\n");
-    exit(-1);
+    exit(10);
   }
 
   char s, t[30];
   scanf("%c %s", &s, t);
   scanf("%d %d", &n, &m);
+  printf("%c %s %d %d\n", s, t, n, m);
   printf("There is %d vertex and %d edges. The array have size of %d\n", n, m, (n * m));
 
   adjList.assign(n, vi());
 
+  int szName = strlen(name);
+  bool clq = (name[szName - 1] == 'q' && name[szName - 2] == 'l' && name[szName - 3] == 'c');
+
   for (int i = 0; i < m; i += 1) {
-    int u, v;
-    scanf("%d %d", &u, &v);
+    int u = 0, v = 0; char c = '\0';
+    
+    if (clq) {
+      scanf(" %c %d %d\n", &c, &u, &v);
+      //cin >> c >> u >> v;
+    } else{
+      scanf("%d %d\n", &u, &v);
+      //cin >> u >> v;
+    }
+
+    //printf("%c %d %d\n", c, u, v);
     u--, v--;
+    //printf("%c %d %d\n", c, u, v);
     adjList[u].push_back(v);
     adjList[v].push_back(u); //TODO: Is it necessary add this?
   }
@@ -125,7 +139,7 @@ int main(int argc, char **argv) {
     exit(EXIT_FAILURE);
   }
 
-  try {
+  try{
     readGraph(argv[1], graph1); 
     runOptimization(graph1);
   } catch (GRBException ex) {
@@ -133,7 +147,7 @@ int main(int argc, char **argv) {
     cout << ex.getMessage() << endl;
   } catch (...) {
     cout << "fora temer" << endl;
-  } 
+  }  
 
   return 0;
 }

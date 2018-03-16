@@ -17,12 +17,9 @@ using namespace std;
 typedef vector<int> vi;
 typedef pair<int, int> ii;
 
-const int NODE_WEIGHT = 1;
-
-vi hardness_main, value_main;
 vector<set<int> > graph1;
-set<vi> cliques_main;
 int n, m;
+set<vi> cliques_main;
 
 void printGraph(vector<vi> &adjList) {
   for (int i = 0; i < (int) adjList.size(); i++) {
@@ -40,19 +37,32 @@ void readGraph(char *name, vector<set<int> > &adjList) {
 
   if (instanceFile == NULL) {
     printf("File cannot be open! Ending the program...\n");
-    exit(-1);
+    exit(10);
   }
 
   char s, t[30];
-  fscanf(instanceFile, "%c %s", &s, t);
-  fscanf(instanceFile, "%d %d", &n, &m);
+  scanf("%c %s", &s, t);
+  scanf("%d %d", &n, &m);
+  printf("%c %s %d %d\n", s, t, n, m);
   printf("There is %d vertex and %d edges. The array have size of %d\n", n, m, (n * m));
-  
+
   adjList.assign(n, set<int>());
 
+  int szName = strlen(name);
+  bool clq = (name[szName - 1] == 'q' && name[szName - 2] == 'l' && name[szName - 3] == 'c');
+
   for (int i = 0; i < m; i += 1) {
-    int u, v;
-    scanf("%d %d", &u, &v);
+    int u, v; char c;
+
+    if (clq) {
+      //scanf("%c %d %d\n", &c, &u, &v);
+      cin >> c >> u >> v;
+    } else{
+      //scanf("%d %d\n", &u, &v);
+      cin >> u >> v;
+    }
+
+    //printf("%c %d %d\n", c, u, v);
     u--, v--;
     adjList[u].insert(v);
     adjList[v].insert(u);
@@ -80,27 +90,26 @@ void expandClique(const ii edge, const vector<set<int> > &adjList, vi &newClique
     }
   }
   
-  printf("new clique\n");
+  /*printf("new clique\n");
   for (auto &x : newClique_) {
     printf("%d ", x + 1);
   }  
-  puts("");
+  puts("");*/
 }
 
 void clq1(const vector<set<int> > &adjList, set<vi> &cliques) {
   set<ii> marked;
-  map<int, vi> cliques_map;
+  //map<int, vi> cliques_map;
   int clique_number = 0;
   
   for (int u = 0; u < (int) adjList.size(); u++) {
     for (const auto &v : adjList[u]) {
-      //printf("looking edge %d %d\n", u + 1, v + 1);
       if ((marked.find(ii(u, v)) == marked.end()) && (marked.find(ii(v, u)) == marked.end())) {
         vi newClique_;
         expandClique(ii(u, v), adjList, newClique_);
         cliques.insert(newClique_);
         
-        cliques_map[clique_number++] = newClique_;
+        //cliques_map[clique_number++] = newClique_;
         
         int cliqueSize = (int) newClique_.size();
         for (int i = 0; i < cliqueSize; i++) {
@@ -113,13 +122,13 @@ void clq1(const vector<set<int> > &adjList, set<vi> &cliques) {
     }
   }
 
-  printf("The cliques are as follows:\n");
+  /*printf("The cliques are as follows:\n");
   for (const auto &clique_ : cliques) {
     for (int i = 0; i < (int) clique_.size(); i++) {
       printf("%d ", clique_[i] + 1);
     }
     puts("");
-  }
+  }*/
 }
 
 void runOptimization(vector<set<int> > &adj, set<vi> &cliques) {
@@ -202,7 +211,7 @@ int main(int argc, char **argv) {
   try {
     readGraph(argv[1], graph1);
     clq1(graph1, cliques_main);
-    //runOptimization(graph1, cliques_main);
+    runOptimization(graph1, cliques_main);
   } catch (GRBException ex) {
     cout << "Error code = " << ex.getErrorCode() << endl;
     cout << ex.getMessage() << endl;
