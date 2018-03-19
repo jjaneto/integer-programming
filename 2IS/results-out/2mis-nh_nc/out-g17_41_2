@@ -2,7 +2,7 @@ Initializing optimization with 0 for heuristics and 0 for cuts...
 c random_17_41 17 41
 There is 17 vertex and 41 edges. The array have size of 697
 Academic license - for non-commercial use only
-Optimize a model with 61 rows, 34 columns and 154 nonzeros
+Optimize a model with 181 rows, 34 columns and 362 nonzeros
 Variable types: 0 continuous, 34 integer (34 binary)
 Coefficient statistics:
   Matrix range     [1e+00, 1e+00]
@@ -10,18 +10,22 @@ Coefficient statistics:
   Bounds range     [1e+00, 1e+00]
   RHS range        [1e+00, 1e+00]
 Found heuristic solution: objective 13.0000000
-Presolve time: 0.00s
-Presolved: 61 rows, 34 columns, 154 nonzeros
 Variable types: 0 continuous, 34 integer (34 binary)
 
-Root relaxation: cutoff, 16 iterations, 0.00 seconds
+Root relaxation: objective 1.700000e+01, 19 iterations, 0.00 seconds
 
     Nodes    |    Current Node    |     Objective Bounds      |     Work
  Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
 
+     0     0   17.00000    0   34   13.00000   17.00000  30.8%     -    0s
      0     0     cutoff    0        13.00000   13.00000  0.00%     -    0s
 
-Explored 0 nodes (16 simplex iterations) in 0.00 seconds
+Cutting planes:
+  Gomory: 1
+  Clique: 16
+  Zero half: 3
+
+Explored 1 nodes (62 simplex iterations) in 0.01 seconds
 Thread count was 8 (of 8 available processors)
 
 Solution count 1: 13 

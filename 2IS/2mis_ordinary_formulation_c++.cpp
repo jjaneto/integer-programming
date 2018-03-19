@@ -222,6 +222,8 @@ void runOptimization(vector<vi> &adj) {
   GRBModel model = GRBModel(env);
   GRBVar vars[nvars]; 
 
+  model.set(GRB_IntParam_Presolve, 0);
+  
   //Adding the variables to the model.
   for (int idx = 0; idx < nvars; idx += 1) {
     ostringstream vname;

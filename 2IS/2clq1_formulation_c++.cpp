@@ -295,6 +295,8 @@ void runOptimization(vector<set<int> > &adj, set<vi> &cliques) {
   model.set(GRB_DoubleParam_TimeLimit, 700.0);
   GRBVar vars[nvars];
 
+  model.set(GRB_IntParam_Presolve, 0);
+
   //------------ Adding the variables to the model.
   for (int idx = 0; idx < nvars; idx += 1) {
     ostringstream vname;
@@ -368,7 +370,6 @@ void runOptimization(vector<set<int> > &adj, set<vi> &cliques) {
 }
 
 int main(int argc, char **argv) {
-
   if (argc < 4) {
     printf("Missing arguments...\n");
     printf("USAGE: ./2mis_ordinary_formulation_c++ [h|nh] [c|nc] [pathOfInstance]\n");

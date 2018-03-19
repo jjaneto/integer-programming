@@ -10,8 +10,6 @@ Coefficient statistics:
   Bounds range     [1e+00, 1e+00]
   RHS range        [1e+00, 1e+00]
 Found heuristic solution: objective 3.0000000
-Presolve time: 0.00s
-Presolved: 53 rows, 34 columns, 378 nonzeros
 Variable types: 0 continuous, 34 integer (34 binary)
 
 Root relaxation: objective 5.000000e+00, 37 iterations, 0.00 seconds
