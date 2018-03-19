@@ -1,0 +1,35 @@
+Initializing optimization with 0 for heuristics and 0 for cuts...
+c random_17_95 17 95
+There is 17 vertex and 95 edges. The array have size of 1615
+Academic license - for non-commercial use only
+Optimize a model with 397 rows, 34 columns and 794 nonzeros
+Variable types: 0 continuous, 34 integer (34 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+00, 1e+00]
+  RHS range        [1e+00, 1e+00]
+Found heuristic solution: objective 6.0000000
+Presolve removed 343 rows and 0 columns
+Presolve time: 0.00s
+Presolved: 54 rows, 34 columns, 233 nonzeros
+Variable types: 0 continuous, 34 integer (34 binary)
+
+Root relaxation: objective 7.500000e+00, 39 iterations, 0.00 seconds
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0    7.50000    0   13    6.00000    7.50000  25.0%     -    0s
+H    0     0                       7.0000000    7.50000  7.14%     -    0s
+
+Explored 1 nodes (82 simplex iterations) in 0.00 seconds
+Thread count was 8 (of 8 available processors)
+
+Solution count 2: 7 6 
+
+Optimal solution found (tolerance 1.00e-04)
+Best objective 7.000000000000e+00, best bound 7.000000000000e+00, gap 0.0000%
+Solution found is optimal!
+First MIS:  0 0 1 0 1 0 0 0 0 0 0 0 1 0 0 0 0 
+Second MIS: 0 0 0 1 0 0 0 0 0 0 1 0 0 0 1 1 0 

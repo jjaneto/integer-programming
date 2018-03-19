@@ -1,0 +1,37 @@
+Initializing optimization with 0 for heuristics and 0 for cuts...
+c random_20_95 20 95
+There is 20 vertex and 95 edges. The array have size of 1900
+Academic license - for non-commercial use only
+Optimize a model with 84 rows, 40 columns and 306 nonzeros
+Variable types: 0 continuous, 40 integer (40 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+00, 1e+00]
+  RHS range        [1e+00, 1e+00]
+Found heuristic solution: objective 8.0000000
+Presolve time: 0.00s
+Presolved: 84 rows, 40 columns, 306 nonzeros
+Variable types: 0 continuous, 40 integer (40 binary)
+
+Root relaxation: objective 1.100000e+01, 72 iterations, 0.00 seconds
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0   11.00000    0   22    8.00000   11.00000  37.5%     -    0s
+H    0     0                      10.0000000   11.00000  10.0%     -    0s
+
+Cutting planes:
+  Zero half: 2
+
+Explored 1 nodes (113 simplex iterations) in 0.01 seconds
+Thread count was 8 (of 8 available processors)
+
+Solution count 2: 10 8 
+
+Optimal solution found (tolerance 1.00e-04)
+Best objective 1.000000000000e+01, best bound 1.000000000000e+01, gap 0.0000%
+Solution found is optimal!
+First MIS:  0 0 0 0 0 1 0 0 0 0 0 0 0 1 0 0 0 1 0 1 
+Second MIS: 0 1 0 0 0 0 0 0 0 1 1 1 0 0 0 1 0 0 1 0 

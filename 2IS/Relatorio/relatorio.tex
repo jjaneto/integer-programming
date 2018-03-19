@@ -13,6 +13,7 @@
 \usepackage{pslatex}
 \usepackage{setspace}
 \usepackage{amssymb}
+\usepackage{minted}
 
 \setstretch{1.5}
 
@@ -75,23 +76,19 @@ Após as duas heurísticas serem aplicadas, suas soluções são comparadas, e a
 
 \section{Implementação}
 
-Todos os códigos implementados possuem um esquema padrão para as suas respectivas execuções. Para compilar, basta inserir o comando \textsl{make} no diretório dos códigos-fonte. Após a compilação, basta digitar o modo a ser testado (formulação original, com clique, com ou sem heurísticas, etc) e o caminho para a instância, a qual já está dentro do diretório.
+Todos os códigos foram implementados em $C++11$ e possuem um esquema padrão para as suas respectivas execuções. Para compilar, basta inserir o comando \textsl{make} no diretório dos códigos-fonte. Após a compilação, basta digitar o modo a ser testado (formulação original, com clique, com ou sem heurísticas, etc) através dos argumentos e o caminho para a instância, a qual já está dentro do diretório. Os argumentos para uma formulação deve receber, em ordem, se usará heurísticas ($h$) ou não ($nh$), e se fará o uso de cortes ($c$) ou não ($nc$). Um exemplo que usa heurística mas não corte é descrito a seguir:
 
-Os algoritmos são divididos em fases, sendo estas (i) de leitura do grafo, (ii) pré-processamento (no caso das cliques) e (iii) execução, seguida pelo resultado, o qual irá ilustrar os dois conjuntos independentes computados.
+\begin{minted}{c}
+  ./2clq1_formulation_c++ h nc ./instancias g10_5_1
+\end{minted}
 
+Os algoritmos são divididos em fases, sendo estas (i) de leitura do grafo, (ii) pré-processamento (no caso das cliques) e (iii) execução e resultado, ilustrando os dois conjuntos independentes encontrados. A leitura é realizada na função \textsl{readgraph()}, a qual redireciona \textsl{STDIN} para o arquivo da instância e lê a lista de adjacência do grafo. O pré-processamento trata de computar as cliques (no caso da CLQ1, na função \textsl{clq1()}, e adicionar os parâmetros do problema inteiro (restrições, função objetivo, etc).
 
+A execução acontece na função \textsl{runOptimization()}. Por fim, a saída do Gurobi também é codificada nessa mesma função. O \textit{Callback} é implementado na classe \textsl{mycallback}. Nessa classe estão implementadas as heurísticas e os cortes utilizado nos experimentos. Considerando o diretório dos códigos fontes como sendo \textsl{./}, então os resultados (a saída do Gurobi) estão no diretório \textsl{./results-out}.
 
+\section{Resultados}
 
-
-
-
-
-
-
-
-
-
-
+Os resultados gerados nesse trabalho abordam somente aqueles executados sem heurísticas e sem cortes, uma vez que nas instâncias pequenas não houveram diferenças entre os resultados. Não há resultados obtidos a partir das instâncias grandes, uma vez que elas demoraram para executar e nesse caso foram interrompidas.
 
 
 

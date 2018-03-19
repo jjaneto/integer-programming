@@ -1,0 +1,37 @@
+../2clq1_formulation_c++
+h
+c
+../instancias/g10_31_2
+Initializing optimization with 1 for heuristics and 1 for cuts...
+c random_10_31 10 31
+There is 10 vertex and 31 edges. The array have size of 310
+Academic license - for non-commercial use only
+Optimize a model with 18 rows, 20 columns and 60 nonzeros
+Variable types: 0 continuous, 20 integer (20 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+00, 1e+00]
+  RHS range        [1e+00, 1e+00]
+Found heuristic solution: objective 3.0000000
+Presolve time: 0.00s
+Presolved: 18 rows, 20 columns, 60 nonzeros
+Variable types: 0 continuous, 20 integer (20 binary)
+
+Root relaxation: objective 5.000000e+00, 10 iterations, 0.00 seconds
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+*    0     0               0       5.0000000    5.00000  0.00%     -    0s
+
+Explored 0 nodes (10 simplex iterations) in 0.00 seconds
+Thread count was 8 (of 8 available processors)
+
+Solution count 2: 5 3 
+
+Optimal solution found (tolerance 1.00e-04)
+Best objective 5.000000000000e+00, best bound 5.000000000000e+00, gap 0.0000%
+Solution found is optimal!
+First MIS:  0 0 1 0 0 0 0 0 0 1 
+Second MIS: 0 1 0 0 0 0 0 1 1 0 

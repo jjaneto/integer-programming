@@ -1,0 +1,38 @@
+../2clq1_formulation_c++
+h
+c
+../instancias/g15_11_1
+Initializing optimization with 1 for heuristics and 1 for cuts...
+c random_15_11 15 11
+There is 15 vertex and 11 edges. The array have size of 165
+Academic license - for non-commercial use only
+Optimize a model with 37 rows, 30 columns and 74 nonzeros
+Variable types: 0 continuous, 30 integer (30 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+00, 1e+00]
+  RHS range        [1e+00, 1e+00]
+Found heuristic solution: objective 14.0000000
+Presolve removed 6 rows and 8 columns
+Presolve time: 0.00s
+Presolved: 31 rows, 22 columns, 62 nonzeros
+Variable types: 0 continuous, 22 integer (22 binary)
+
+Root relaxation: objective 1.500000e+01, 11 iterations, 0.00 seconds
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+*    0     0               0      15.0000000   15.00000  0.00%     -    0s
+
+Explored 0 nodes (11 simplex iterations) in 0.00 seconds
+Thread count was 8 (of 8 available processors)
+
+Solution count 2: 15 14 
+
+Optimal solution found (tolerance 1.00e-04)
+Best objective 1.500000000000e+01, best bound 1.500000000000e+01, gap 0.0000%
+Solution found is optimal!
+First MIS:  1 1 0 0 1 0 0 0 1 1 0 1 1 0 0 
+Second MIS: 0 0 1 1 0 1 1 1 0 0 1 0 0 1 1 

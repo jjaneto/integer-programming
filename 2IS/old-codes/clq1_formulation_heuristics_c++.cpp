@@ -21,6 +21,7 @@ typedef pair<int, int> ii;
 
 const int NODE_WEIGHT = 1;
 
+char heuristic = 'h', cuts = 'c';
 vi hardness_main, value_main;
 vector<vi> graph1;
 set<vi> cliques_main;
@@ -72,6 +73,9 @@ private:
     }
 
     variables[indexVar] = 1.0;
+    if (indexVar > numvars / 2) {
+      variables[indexVar - (numvars / 2)] = 0.0;
+    } else variables[indexVar + (numvars / 2)] = 0.0;
     for (int i = 0; i < (int) adjList[indexVar].size(); i++) {
       variables[adjList[indexVar][i]] = 0.0;
     }    
@@ -95,9 +99,19 @@ private:
     }
 
     variables[indexVar] = 1.0;
+    if (indexVar > numvars / 2) {
+      variables[indexVar - (numvars / 2)] = 0.0;
+    } else variables[indexVar + (numvars / 2)] = 0.0;
     for (int i = 0; i < (int) adjList[indexVar].size(); i++) {
       variables[adjList[indexVar][i]] = 0.0;
     }
+  }
+
+  void violatedCliqueConstraint() {
+    typedef vector<vi> Graph;
+    Graph graph(this->adjList);
+    vector<int> marked_nodes;
+    vector<bool> isAvailable((int) adjList.size(), false);
   }
   //-----------------------Heuristics----------------------------
 };

@@ -1,3 +1,5 @@
+#include <assert.h>
+#include <fstream>
 #include <limits>
 #include <map>
 #include <set>
@@ -17,9 +19,160 @@ using namespace std;
 typedef vector<int> vi;
 typedef pair<int, int> ii;
 
+bool heuristic, cuts; 
 vector<set<int> > graph1;
-int n, m;
 set<vi> cliques_main;
+int n, m;
+
+class mycallback: public GRBCallback {
+public:
+  double lastiter;
+  double lastnode;
+  int numvars;
+  GRBVar* vars;
+  ofstream* logfile;
+  vector<set<int> > adjList;
+  int nVertex;
+  mycallback(int xnumvars, GRBVar* xvars, ofstream* xlogfile, vector<set<int> > adjList) {
+    lastiter = lastnode = -GRB_INFINITY;
+    numvars = xnumvars;
+    vars = xvars;
+    logfile = xlogfile;
+    this->adjList = adjList;
+    nVertex = (int) numvars / 2;
+  }
+protected:
+  void callback () {
+    try {
+      if (where == GRB_CB_MIPNODE) {
+        if (getIntInfo(GRB_CB_MIPNODE_STATUS) == GRB_OPTIMAL) {
+          if (heuristic) {
+            double* x = getNodeRel(vars, numvars);
+            double* y = getNodeRel(vars, numvars); 
+            RND1(x), RND2(y); //Apply the heuristics
+            int sum1 = 0, sum2 = 0;
+            for (int i = 0; i < numvars; i++) {
+              sum1 += ((int) x[i]);
+              sum2 += ((int) y[i]);
+            }
+            if (sum1 > sum2) {
+              setSolution(vars, x, numvars);
+            } else setSolution(vars, y, numvars);
+            delete[] x;
+            delete[] y;
+          }
+
+          if (cuts) {
+            double* x = getNodeRel(vars, numvars);
+            violatedCliqueConstraint(x);
+          }
+        }
+      }
+    } catch (GRBException e) {
+      cout << "Error number: " << e.getErrorCode() << endl;
+      cout << e.getMessage() << endl;
+    }    
+  }
+
+private:
+  bool isEveryoneIsZeroOrOne(double *variables) {
+    for (int i = 0; i < numvars; i++) {
+      if (variables[i] != 0.0 && variables[i] != 1.0) {
+        //printf("var %d is %.2lf\n", i, variables[i]);
+        return false;
+      }
+    }
+    //printf("all right\n");
+    return true;
+  }
+  //-----------------------Heuristics----------------------------
+  //Set to 1.0 the selected variable and to 0.0 all its adjacents (for each MIS)
+  void RND1(double *vars) {
+    //cout << "begin rnd1" << endl;
+    double variables[numvars];
+    for (int i = 0; i < numvars; i++) {
+      variables[i] = vars[i];
+    }
+    while (!isEveryoneIsZeroOrOne(variables)){
+      double value = numeric_limits<double>::lowest();
+      int idx = -100;
+
+      for (int i = 0; i < numvars; i++) {
+        if (variables[i] < 1.0 && variables[i] > value) {
+          idx = i;
+          value = variables[i];
+        }
+      }
+
+      variables[idx] = 1.0;
+      if (idx >= nVertex) {
+        variables[idx - nVertex] = 0.0;
+        for (const auto &v : adjList[idx - nVertex]) {
+          variables[v + nVertex] = 0.0;
+        }
+      } else {
+        variables[idx + nVertex] = 0.0;
+        for (const auto &v : adjList[idx]) {
+          variables[v] = 0.0;
+        }
+      }
+    }
+  }
+
+  void RND2(double *vars) {
+    //cout << "begin rnd2" << endl;
+    double variables[numvars];
+    for (int i = 0; i < numvars; i++) {
+      variables[i] = vars[i];
+    }
+    while (!isEveryoneIsZeroOrOne(variables)) {
+      double value = numeric_limits<double>::max();
+      int idx = -100;
+
+      for (int i = 0; i < numvars; i++) {
+        if (variables[i] > 0.0 && variables[i] < 1.0) {
+          double sum = variables[i];
+          if (i >= nVertex) {
+            for (const auto &v : adjList[i - nVertex]) {
+              sum += variables[v + nVertex];
+            }
+          } else {
+            for (const auto &v : adjList[i]) {
+              sum += variables[v];
+            }
+          }
+
+          if (sum < value) {
+            idx = i;
+            value = sum;
+          }
+        }
+      }
+
+      variables[idx] = 1.0;
+      if (idx >= nVertex) {
+        variables[idx - nVertex] = 0.0;
+        for (const auto &v : adjList[idx - nVertex]) {
+          variables[v + nVertex] = 0.0;
+        }
+      } else {
+        variables[idx + nVertex] = 0.0;
+        for (const auto &v : adjList[idx]) {
+          variables[v] = 0.0;
+        }
+      }      
+    }
+  }
+//-----------------------Heuristics----------------------------
+//--------------------------Cuts-------------------------------
+  void violatedCliqueConstraint(double *variables) {
+    /*typedef vector<vi> Graph;
+    Graph graph(this->adjList);
+    vector<int> marked_nodes;
+    vector<bool> isAvailable((int) adjList.size(), false);*/
+  }
+};
+
 
 void printGraph(vector<vi> &adjList) {
   for (int i = 0; i < (int) adjList.size(); i++) {
@@ -37,6 +190,7 @@ void readGraph(char *name, vector<set<int> > &adjList) {
 
   if (instanceFile == NULL) {
     printf("File cannot be open! Ending the program...\n");
+    printf("%s\n", name);
     exit(10);
   }
 
@@ -69,6 +223,7 @@ void readGraph(char *name, vector<set<int> > &adjList) {
   }
 }
 
+
 bool adjacentToAll(const int v, const vector<set<int> > &adjList, const vi &newClique_) {
   for (int i = 0; i < (int) newClique_.size(); i++) {
     if (adjList[newClique_[i]].find(v) == adjList[newClique_[i]].end()) {
@@ -91,10 +246,10 @@ void expandClique(const ii edge, const vector<set<int> > &adjList, vi &newClique
   }
   
   /*printf("new clique\n");
-  for (auto &x : newClique_) {
+    for (auto &x : newClique_) {
     printf("%d ", x + 1);
-  }  
-  puts("");*/
+    }  
+    puts("");*/
 }
 
 void clq1(const vector<set<int> > &adjList, set<vi> &cliques) {
@@ -123,12 +278,12 @@ void clq1(const vector<set<int> > &adjList, set<vi> &cliques) {
   }
 
   /*printf("The cliques are as follows:\n");
-  for (const auto &clique_ : cliques) {
+    for (const auto &clique_ : cliques) {
     for (int i = 0; i < (int) clique_.size(); i++) {
-      printf("%d ", clique_[i] + 1);
+    printf("%d ", clique_[i] + 1);
     }
     puts("");
-  }*/
+    }*/
 }
 
 void runOptimization(vector<set<int> > &adj, set<vi> &cliques) {
@@ -137,6 +292,7 @@ void runOptimization(vector<set<int> > &adj, set<vi> &cliques) {
 
   GRBEnv env = GRBEnv();
   GRBModel model = GRBModel(env);
+  model.set(GRB_DoubleParam_TimeLimit, 700.0);
   GRBVar vars[nvars];
 
   //------------ Adding the variables to the model.
@@ -178,12 +334,23 @@ void runOptimization(vector<set<int> > &adj, set<vi> &cliques) {
   for (int var = 0; var < nvars; var++) {
     obj += vars[var];
   }
+
+  //------- Callback
+  ofstream logfile("cb.log");
+  if (!logfile.is_open()) {
+    cout << "Cannot open cb.log for callback message" << endl;
+    exit(1);
+  }
+  
+  mycallback cb = mycallback(nvars, vars, &logfile, adj);
+  
+  model.setCallback(&cb);
   
   model.setObjective(obj, GRB_MAXIMIZE);
   model.optimize();
 
   int status = model.get(GRB_IntAttr_Status);
-
+  
   if (status == GRB_OPTIMAL) {
     printf("Solution found is optimal!\n");
     vector<int> newVertex;
@@ -202,14 +369,32 @@ void runOptimization(vector<set<int> > &adj, set<vi> &cliques) {
 
 int main(int argc, char **argv) {
 
-  if (argc < 2) {
+  if (argc < 4) {
     printf("Missing arguments...\n");
-    printf("USAGE: ./2mis_ordinary_formulation_c++ 'pathOfInstance'\n");
+    printf("USAGE: ./2mis_ordinary_formulation_c++ [h|nh] [c|nc] [pathOfInstance]\n");
     exit(EXIT_FAILURE);
   }
 
   try {
-    readGraph(argv[1], graph1);
+    if (strcmp(argv[1], "h") == 0) {
+      heuristic = true;
+    } else if (strcmp(argv[1], "nh") == 0) {
+      heuristic = false;
+    } else {
+      puts("COULD NOT RECOGNIZE THE HEURISTIC ARGS");
+      exit(3);
+    }
+
+    if (strcmp(argv[2], "c") == 0) {
+      cuts = true;
+    } else if (strcmp(argv[2], "nc") == 0) {
+      cuts = false;
+    } else {
+      puts("COULD NOT RECOGNIZE THE CUT ARGS");
+      exit(3);
+    }    
+    cout << "Initializing optimization with " << heuristic << " for heuristics and " << cuts << " for cuts..." << endl;
+    readGraph(argv[3], graph1);
     clq1(graph1, cliques_main);
     runOptimization(graph1, cliques_main);
   } catch (GRBException ex) {
